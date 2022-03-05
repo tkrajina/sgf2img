@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="goban.js"></script>
+    </head>
+    <body>
+        <textarea id="goban" cols="100" rows="30"></textarea>
+        <br/>
+        <br/>
+        <a href="javascript:void(document.getElementById('goban').value = document.getElementById('goban').value.replace(/\·/g, '.').replace().replace(/●/g, 'b').replace(/○/g, 'w').replace(/↩/g, ''))">replace</a>
+    </body>
+</html>

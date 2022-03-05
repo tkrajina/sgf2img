@@ -1,0 +1,1 @@
+<img src='sgf2img_goban_example_game_1.png' />	<img src='sgf2img_goban_example_game_1_animated.png'/>

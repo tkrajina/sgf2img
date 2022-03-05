@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="goban.js"></script>
+    </head>
+    <body>
+        <span id="goban">
+
+<pre>
+...................
+..............www..
+...w......b.w.bwb..
+..............bbb..
+...w...............
+...................
+...................
+...............b...
+................b..
+...................
+..............bbw..
+...............w.w.
+.............bbbww.
+..............wwbb.
+...w........w.wb...
+.........b.....b.w.
+...w.........w.b.B.
+...................
+...................
+PW:katago with ELO 10000 custom config
+PB:katago with ELO 10000
+AP:Sabaki:0.52.0
+DT:2022-03-05
+RE:B+Resign
+FN:sgf/example_game.sgf
+TR:pp,qi
+SQ:po
+CR:qn
+MA:pq
+LB:rn:A,rp:1
+--
+17:.................W.
+
+--
+16:...w.........w.bBb.
+
+--
+17:..............W..w.
+
+--
+14:...w........w.wb.B.
+
+--
+16:...w......W..w.bbb.
+
+--
+2:...w...B..b.w.bwb..
+
+
+
+
+
+</pre>
+
+
+
+
+
+
+
+        </span>
+        <p id="goban_turn"></p>
+        <p id="goban_comment"></p>
+        <script>goban = new Goban(400)</script>
+        <script>goban.animate(2000, 1000)</script>
+        <a href="javascript:void(goban.animate(2000, 1000))">animate</a>
+    </body>
+</html>
