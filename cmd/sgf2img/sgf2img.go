@@ -243,7 +243,7 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 				if opts.verbose {
 					fmt.Println(sgfutils.BoardToString(*node.Board()))
 				}
-				return fmt.Errorf("can't find node with img name '%s' for animation", ca.name)
+				return fmt.Errorf("can't find node with img name '%s' for animation (loc %d)", ca.name, depth+1)
 			} else {
 				animatedNodes = append([]sgf.Node{*tmpNode}, animatedNodes...)
 			}

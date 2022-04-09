@@ -53,7 +53,7 @@ files_loop:
 			if renameAll {
 				resp = "a"
 			} else {
-				resp = strings.ToLower(input("Rename? [(y)es (N)o (A)all]"))
+				resp = strings.ToLower(sgfutils.Input("Rename? [(y)es (N)o (A)all]"))
 			}
 			renameAll = resp == "a"
 			if renameAll || resp == "y" {
@@ -88,11 +88,4 @@ func walkNodes(node *sgf.Node, depth int, moves *bytes.Buffer) {
 		}
 		walkNodes(child, depth+1, moves)
 	}
-}
-
-func input(msg string) string {
-	fmt.Print(msg + ":")
-	var target string
-	fmt.Scanln(&target)
-	return target
 }

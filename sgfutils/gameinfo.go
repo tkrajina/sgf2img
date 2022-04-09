@@ -2,6 +2,7 @@ package sgfutils
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/rooklift/sgf"
 )
@@ -67,6 +68,23 @@ func ParseGameInfo(node *sgf.Node) GameInfo {
 		newFn = append(newFn, res.WhiteRank)
 	}
 
+	for n := range newFn {
+		cleared := ""
+		for _, r := range []rune(newFn[n]) {
+			if unicode.IsSpace(r) {
+				cleared += string(" ")
+			} else if strings.ToLower(string(r)) != strings.ToUpper(string(r)) {
+				cleared += string(r)
+			} else if unicode.IsDigit(r) {
+				cleared += string(r)
+			} else if strings.ContainsRune("().,-", r) {
+				cleared += string(r)
+			}
+		}
+		newFn[n] = strings.TrimSpace(cleared)
+	}
+
 	res.SuggestedFilename = strings.ReplaceAll(strings.Join(newFn, "_"), " ", "_")
+	res.SuggestedFilename = strings.ReplaceAll(res.SuggestedFilename, "__", "_")
 	return res
 }
