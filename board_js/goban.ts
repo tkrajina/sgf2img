@@ -80,8 +80,8 @@ class GobanPosition {
 	lines: string[] = [];
 	tags: {[tag: string]: string[]} = {};
 	labelsByLocations: {[coordinates: string]: string} = {};
-	whiteTurn = false;
-	blackTurn = false;
+	whitePlays = false;
+	blackPlays = false;
 
 	constructor() {
 	}
@@ -94,16 +94,14 @@ class GobanPosition {
 		if (line.match(/^[\.wbWB]{5,}$/)) {
 			console.log("board line:", line);
 			this.lines.push(line);
-			if (line.indexOf("B") > 0) {
-				this.whiteTurn = true
-			}
-			if (line.indexOf("W") >= 0) {
-				this.blackTurn = true
-			}
+			this.whitePlays = line.indexOf("B") > 0
+			this.blackPlays = line.indexOf("W") >= 0
 		} else if (line.match(/^\d+:.*/)) {
 			console.log("diff line:", line);
 			const parts = line.split(":");
 			this.lines[parseInt(parts[0])] = parts[1]
+			this.whitePlays = line.indexOf("B") > 0
+			this.blackPlays = line.indexOf("W") >= 0
 		} else if (line.toLocaleLowerCase().match(/crop:.*/)) {
 		} else if (line.match(/\w+:.*/)) {
 			console.log("tag line:", line);
@@ -134,10 +132,10 @@ class GobanPosition {
 		}
 
 		if (this.tags[SGFTag.WhiteMove]) {
-			this.blackTurn = true;
+			this.blackPlays = true;
 		}
 		if (this.tags[SGFTag.BlackMove]) {
-			this.whiteTurn = true;
+			this.whitePlays = true;
 		}
 
 	}
@@ -277,10 +275,11 @@ class Goban {
 	}
 
 	drawBoard(position: number) {
-		this.drawStones(this.positions[position % this.positions.length]);
+		const n = position % this.positions.length
+		this.drawStones(this.positions[n], this.positions[n+1]);
 	}
 
-	drawStones(g: GobanPosition) {
+	drawStones(g: GobanPosition, next: GobanPosition | undefined) {
 		for (let col = 0; col < this.boardSize; col++) {
 			for (let row = 0; row < this.boardSize; row++) {
 				this.drawStone(g, row, col);
@@ -288,12 +287,12 @@ class Goban {
 		}
 		let turnEl = document.getElementById("goban_turn");
 		if (turnEl) {
-			if (g.blackTurn) {
-				turnEl.innerHTML = "<strong>BLACK<strong> to play";
-			} else if (g.whiteTurn) {
+			if (next.blackPlays) {
 				turnEl.innerHTML = "<strong>WHITE</strong> to play";
+			} else if (next.whitePlays) {
+				turnEl.innerHTML = "<strong>BLACK<strong> to play";
 			} else {
-				turnEl.innerHTML = "";
+				turnEl.innerHTML = "...";
 			}
 		}
 		let commentsEl = document.getElementById("goban_comment");

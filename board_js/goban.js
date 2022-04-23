@@ -73,8 +73,8 @@ var GobanPosition = /** @class */ (function () {
         this.lines = [];
         this.tags = {};
         this.labelsByLocations = {};
-        this.whiteTurn = false;
-        this.blackTurn = false;
+        this.whitePlays = false;
+        this.blackPlays = false;
     }
     GobanPosition.prototype.size = function () {
         var _a;
@@ -84,17 +84,15 @@ var GobanPosition = /** @class */ (function () {
         if (line.match(/^[\.wbWB]{5,}$/)) {
             console.log("board line:", line);
             this.lines.push(line);
-            if (line.indexOf("B") > 0) {
-                this.whiteTurn = true;
-            }
-            if (line.indexOf("W") >= 0) {
-                this.blackTurn = true;
-            }
+            this.whitePlays = line.indexOf("B") > 0;
+            this.blackPlays = line.indexOf("W") >= 0;
         }
         else if (line.match(/^\d+:.*/)) {
             console.log("diff line:", line);
             var parts = line.split(":");
             this.lines[parseInt(parts[0])] = parts[1];
+            this.whitePlays = line.indexOf("B") > 0;
+            this.blackPlays = line.indexOf("W") >= 0;
         }
         else if (line.toLocaleLowerCase().match(/crop:.*/)) {
         }
@@ -128,10 +126,10 @@ var GobanPosition = /** @class */ (function () {
             console.error("Invalid line: " + line);
         }
         if (this.tags[SGFTag.WhiteMove]) {
-            this.blackTurn = true;
+            this.blackPlays = true;
         }
         if (this.tags[SGFTag.BlackMove]) {
-            this.whiteTurn = true;
+            this.whitePlays = true;
         }
     };
     return GobanPosition;
@@ -257,9 +255,10 @@ var Goban = /** @class */ (function () {
         this.containerElement.appendChild(containerWindowDiv);
     };
     Goban.prototype.drawBoard = function (position) {
-        this.drawStones(this.positions[position % this.positions.length]);
+        var n = position % this.positions.length;
+        this.drawStones(this.positions[n], this.positions[n + 1]);
     };
-    Goban.prototype.drawStones = function (g) {
+    Goban.prototype.drawStones = function (g, next) {
         var _a, _b;
         for (var col = 0; col < this.boardSize; col++) {
             for (var row = 0; row < this.boardSize; row++) {
@@ -268,14 +267,14 @@ var Goban = /** @class */ (function () {
         }
         var turnEl = document.getElementById("goban_turn");
         if (turnEl) {
-            if (g.blackTurn) {
-                turnEl.innerHTML = "<strong>BLACK<strong> to play";
-            }
-            else if (g.whiteTurn) {
+            if (next.blackPlays) {
                 turnEl.innerHTML = "<strong>WHITE</strong> to play";
             }
+            else if (next.whitePlays) {
+                turnEl.innerHTML = "<strong>BLACK<strong> to play";
+            }
             else {
-                turnEl.innerHTML = "";
+                turnEl.innerHTML = "...";
             }
         }
         var commentsEl = document.getElementById("goban_comment");
