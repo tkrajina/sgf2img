@@ -104,6 +104,7 @@ class GobanPosition {
 			console.log("diff line:", line);
 			const parts = line.split(":");
 			this.lines[parseInt(parts[0])] = parts[1]
+		} else if (line.toLocaleLowerCase().match(/crop:.*/)) {
 		} else if (line.match(/\w+:.*/)) {
 			console.log("tag line:", line);
 			const pos = line.indexOf(":");
@@ -153,6 +154,11 @@ class Goban {
 	bandWitdh: number;
 	stoneSide: number;
 
+	cropTop = 0;
+	cropRight = 0;
+	cropBottom = 0;
+	cropLeft = 0;
+
 	constructor(private readonly sidePx: number) {
 		this.drawGoban();
 		if (this.positions?.length) {
@@ -178,6 +184,14 @@ class Goban {
 		const res: GobanPosition[] = [];
 		for (let line of content.trim().split("\n")) {
 			//console.log("line:", line);
+			if (line.trim().toLowerCase().match(/^crop:.*/)) {
+				const parts = line.split(":")[1].split(/[\s,]/) || ["0","0","0","0"];
+				this.cropTop = parseFloat(parts[0]) || 0;
+				this.cropRight = parseFloat(parts[1]) || 0;
+				this.cropBottom = parseFloat(parts[2]) || 0;
+				this.cropLeft = parseFloat(parts[3]) || 0;
+				continue;
+			}
 			if (res.length == 0) {
 				res.push(new GobanPosition());
 			}
@@ -209,23 +223,17 @@ class Goban {
 		this.bandWitdh = this.sidePx / (this.boardSize - 1);
 		this.stoneSide = this.bandWitdh * 0.95;
 
-		// CROP:
-		const left = 0;
-		const right = 0.;
-		const bottom = 0.;
-		const top = 0;
-
 		const containerWindowDiv = document.createElement("div")
 		containerWindowDiv.style.position = "relative";
 		containerWindowDiv.style.overflow = "hidden";
 		//containerWindowDiv.style.border = "5px solid red";
-		containerWindowDiv.style.width = `${(1 - right - left) * (this.sidePx + this.bandWitdh*2)}px`;
-		containerWindowDiv.style.height = `${(1 - bottom - top) * (this.sidePx + this.bandWitdh*2)}px`;
+		containerWindowDiv.style.width = `${(1 - this.cropRight - this.cropLeft) * (this.sidePx + this.bandWitdh*2)}px`;
+		containerWindowDiv.style.height = `${(1 - this.cropBottom - this.cropTop) * (this.sidePx + this.bandWitdh*2)}px`;
 
 		this.gobanDiv = document.createElement("div");
 		this.gobanDiv.style.position = "absolute";
-		this.gobanDiv.style.top = `${(- top) * (this.sidePx + this.bandWitdh*2)}px`;
-		this.gobanDiv.style.left = `${(- left) * (this.sidePx + this.bandWitdh*2)}px`;
+		this.gobanDiv.style.top = `${(- this.cropTop) * (this.sidePx + this.bandWitdh*2)}px`;
+		this.gobanDiv.style.left = `${(- this.cropLeft) * (this.sidePx + this.bandWitdh*2)}px`;
 		this.gobanDiv.style.overflow = "hidden";
 		this.gobanDiv.style.marginBottom = `${-50}px`;
 		this.gobanDiv.style.backgroundColor = bgColor;

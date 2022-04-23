@@ -96,6 +96,8 @@ var GobanPosition = /** @class */ (function () {
             var parts = line.split(":");
             this.lines[parseInt(parts[0])] = parts[1];
         }
+        else if (line.toLocaleLowerCase().match(/crop:.*/)) {
+        }
         else if (line.match(/\w+:.*/)) {
             console.log("tag line:", line);
             var pos = line.indexOf(":");
@@ -139,6 +141,10 @@ var Goban = /** @class */ (function () {
         var _a;
         this.sidePx = sidePx;
         this.positions = [];
+        this.cropTop = 0;
+        this.cropRight = 0;
+        this.cropBottom = 0;
+        this.cropLeft = 0;
         this.drawGoban();
         if ((_a = this.positions) === null || _a === void 0 ? void 0 : _a.length) {
             this.drawBoard(0);
@@ -163,6 +169,14 @@ var Goban = /** @class */ (function () {
         for (var _i = 0, _a = content.trim().split("\n"); _i < _a.length; _i++) {
             var line = _a[_i];
             //console.log("line:", line);
+            if (line.trim().toLowerCase().match(/^crop:.*/)) {
+                var parts = line.split(":")[1].split(/[\s,]/) || ["0", "0", "0", "0"];
+                this.cropTop = parseFloat(parts[0]) || 0;
+                this.cropRight = parseFloat(parts[1]) || 0;
+                this.cropBottom = parseFloat(parts[2]) || 0;
+                this.cropLeft = parseFloat(parts[3]) || 0;
+                continue;
+            }
             if (res.length == 0) {
                 res.push(new GobanPosition());
             }
@@ -193,21 +207,16 @@ var Goban = /** @class */ (function () {
         console.log("board size: " + this.boardSize);
         this.bandWitdh = this.sidePx / (this.boardSize - 1);
         this.stoneSide = this.bandWitdh * 0.95;
-        // CROP:
-        var left = 0;
-        var right = 0.;
-        var bottom = 0.;
-        var top = 0;
         var containerWindowDiv = document.createElement("div");
         containerWindowDiv.style.position = "relative";
         containerWindowDiv.style.overflow = "hidden";
         //containerWindowDiv.style.border = "5px solid red";
-        containerWindowDiv.style.width = (1 - right - left) * (this.sidePx + this.bandWitdh * 2) + "px";
-        containerWindowDiv.style.height = (1 - bottom - top) * (this.sidePx + this.bandWitdh * 2) + "px";
+        containerWindowDiv.style.width = (1 - this.cropRight - this.cropLeft) * (this.sidePx + this.bandWitdh * 2) + "px";
+        containerWindowDiv.style.height = (1 - this.cropBottom - this.cropTop) * (this.sidePx + this.bandWitdh * 2) + "px";
         this.gobanDiv = document.createElement("div");
         this.gobanDiv.style.position = "absolute";
-        this.gobanDiv.style.top = (-top) * (this.sidePx + this.bandWitdh * 2) + "px";
-        this.gobanDiv.style.left = (-left) * (this.sidePx + this.bandWitdh * 2) + "px";
+        this.gobanDiv.style.top = (-this.cropTop) * (this.sidePx + this.bandWitdh * 2) + "px";
+        this.gobanDiv.style.left = (-this.cropLeft) * (this.sidePx + this.bandWitdh * 2) + "px";
         this.gobanDiv.style.overflow = "hidden";
         this.gobanDiv.style.marginBottom = -50 + "px";
         this.gobanDiv.style.backgroundColor = bgColor;
