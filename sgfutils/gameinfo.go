@@ -11,6 +11,8 @@ type GameInfo struct {
 	RootNode *sgf.Node
 	Date     string
 
+	Event string
+
 	BlackName string
 	BlackRank string
 	BlackTeam string
@@ -30,6 +32,7 @@ type GameInfo struct {
 func ParseGameInfo(node *sgf.Node) GameInfo {
 	res := GameInfo{RootNode: node}
 	res.Date, _ = node.GetValue(SGFTagDate)
+	res.Event, _ = node.GetValue(SGFTagEvent)
 
 	res.BlackName, _ = node.GetValue(SGFTagBlackName)
 	res.BlackTeam, _ = node.GetValue(SGFTagBlackTeam)

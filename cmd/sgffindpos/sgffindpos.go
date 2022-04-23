@@ -61,7 +61,7 @@ func main() {
 }
 
 func processSgfFile(sgfFn string, opts Opts) error {
-	fmt.Println("Loading", sgfFn)
+	//fmt.Println("Loading", sgfFn)
 	node, err := sgf.Load(sgfFn)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func walkNodesAndMarkMistakes(node *sgf.Node, opts Opts, depth int) error {
 		fmt.Println("Found:")
 		fmt.Println(sgfutils.BoardToString(*node.Board()))
 		fmt.Println("File: " + opts.filename)
-		fmt.Printf("Move: %d\n", depth+1)
+		fmt.Printf("Move: %d\n", depth)
 		return nil
 	}
 

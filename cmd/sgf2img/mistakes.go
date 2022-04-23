@@ -49,6 +49,6 @@ func markMistakes(mistakeNode *sgf.Node) {
 	}
 
 	comment, _ = branch.GetValue(sgfutils.SGFTagComment)
-	branch.SetValue(sgfutils.SGFTagComment, directiveAnimate[0]+" "+id+"\n"+comment)
+	branch.SetValue(sgfutils.SGFTagComment, directiveEnd[0]+" "+id+"\n"+comment)
 	fmt.Println("Setting end ", id)
 }

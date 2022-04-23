@@ -11,15 +11,19 @@ import (
 )
 
 var (
-	directiveImg     = []string{"!s", "!start", "!img"}
-	directiveAnimate = []string{"!e", "!end", "!animate"}
+	directiveImg     = []string{"!i", "!img"}
+	directiveStart   = []string{"!s", "!start"}
+	directiveEnd     = []string{"!e", "!end"}
+	directiveComment = []string{"!c"}
 )
 
 var directives = []string{}
 
 func init() {
 	directives = append(directives, directiveImg...)
-	directives = append(directives, directiveAnimate...)
+	directives = append(directives, directiveStart...)
+	directives = append(directives, directiveEnd...)
+	directives = append(directives, directiveComment...)
 }
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
@@ -35,6 +39,7 @@ type commentAnimate struct {
 type commentMedatada struct {
 	comment string
 	images  []commentImage
+	start   []commentImage
 	animate []commentAnimate
 }
 
@@ -55,7 +60,9 @@ func parseComment(comment string, boardSize int) (cm commentMedatada) {
 		if len(parts) == 0 {
 			continue
 		}
-		if isOneOf(parts[0], directiveImg) {
+		isImg := isOneOf(parts[0], directiveImg)
+		isStart := isOneOf(parts[0], directiveStart)
+		if isImg || isStart {
 			ci := commentImage{}
 			if len(parts) > 1 {
 				ci.name = parts[1]
@@ -85,9 +92,14 @@ func parseComment(comment string, boardSize int) (cm commentMedatada) {
 					}
 				}
 			}
-			cm.images = append(cm.images, ci)
+			if isImg {
+				cm.images = append(cm.images, ci)
+			}
+			if isStart {
+				cm.start = append(cm.start, ci)
+			}
 		}
-		if isOneOf(parts[0], directiveAnimate) {
+		if isOneOf(parts[0], directiveEnd) {
 			ca := commentAnimate{}
 			if len(parts) > 1 {
 				ca.name = parts[1]

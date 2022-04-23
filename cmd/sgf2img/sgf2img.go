@@ -232,7 +232,7 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 	loop:
 		for true {
 			parentCm := parseNodeComment(tmpNode)
-			for _, parentCi := range parentCm.images {
+			for _, parentCi := range parentCm.start {
 				if parentCi.name == ca.name {
 					parentImage = parentCi
 					break loop

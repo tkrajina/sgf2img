@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -71,8 +72,9 @@ func getMovesHash(node *sgf.Node) string {
 	walkNodes(node, 0, movesCoords)
 	h := md5.New()
 	str := movesCoords.String()
-	hash := fmt.Sprintf("%x", h.Sum(nil))[0:5]
-	//fmt.Println(str, "->", hash)
+	h.Write([]byte(str))
+	hash := hex.EncodeToString(h.Sum(nil))[0:5]
+	//fmt.Println(str, "\n->", hash)
 	io.WriteString(h, str)
 	return hash
 }
