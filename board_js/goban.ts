@@ -46,7 +46,7 @@ enum SGFTag {
 
 type Stone = '.' | 'B' | 'W' | 'b' | 'w';
 
-const NEXT_PLAYER_LABEL = "◍";
+const NEXT_PLAYER_LABEL = "●";
 
 const TAG_LABELS = {
 	[SGFTag.Triangle]: "△",
@@ -321,7 +321,16 @@ class Goban {
 				centerDiv.innerHTML = label;
 			}
 			centerDiv.style.position = "absolute";
-			centerDiv.style.color = "gray";
+			switch (stone.toLowerCase()) {
+			case "w":
+				centerDiv.style.color = blackStoneColor;
+				break;
+			case "b":
+				centerDiv.style.color = whiteStoneColor;
+				break;
+			default:
+				centerDiv.style.color = "red";
+			}
 			centerDiv.style.left = "50%";
 			centerDiv.style.top = "50%";
 			centerDiv.style.transform = "translate(-50%, -55%)";

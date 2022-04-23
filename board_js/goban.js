@@ -44,7 +44,7 @@ var SGFTag;
     SGFTag["X"] = "MA";
     SGFTag["Label"] = "LB";
 })(SGFTag || (SGFTag = {}));
-var NEXT_PLAYER_LABEL = "◍";
+var NEXT_PLAYER_LABEL = "●";
 var TAG_LABELS = (_a = {},
     _a[SGFTag.Triangle] = "△",
     _a[SGFTag.Square] = "□",
@@ -299,7 +299,16 @@ var Goban = /** @class */ (function () {
                 centerDiv.innerHTML = label;
             }
             centerDiv.style.position = "absolute";
-            centerDiv.style.color = "gray";
+            switch (stone.toLowerCase()) {
+                case "w":
+                    centerDiv.style.color = blackStoneColor;
+                    break;
+                case "b":
+                    centerDiv.style.color = whiteStoneColor;
+                    break;
+                default:
+                    centerDiv.style.color = "red";
+            }
             centerDiv.style.left = "50%";
             centerDiv.style.top = "50%";
             centerDiv.style.transform = "translate(-50%, -55%)";
