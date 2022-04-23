@@ -187,26 +187,42 @@ var Goban = /** @class */ (function () {
         return res;
     };
     Goban.prototype.drawGoban = function () {
-        this.gobanEl = document.getElementById("goban");
-        this.positions = this.parseGolangPositions(this.gobanEl.innerHTML.trim());
+        this.containerElement = document.getElementById("goban");
+        this.positions = this.parseGolangPositions(this.containerElement.innerHTML.trim());
         this.boardSize = this.positions[0].size();
         console.log("board size: " + this.boardSize);
         this.bandWitdh = this.sidePx / (this.boardSize - 1);
         this.stoneSide = this.bandWitdh * 0.95;
-        this.containerDiv = document.createElement("div");
-        this.containerDiv.style.position = "relative";
-        this.containerDiv.style.backgroundColor = bgColor;
-        this.containerDiv.style.border = "0.01px solid gray";
-        this.containerDiv.style.width = this.sidePx + this.bandWitdh * 2 + "px";
-        this.containerDiv.style.height = this.sidePx + this.bandWitdh * 2 + "px";
-        this.gobanLinesDiv = document.createElement("div");
-        this.gobanLinesDiv.style.position = "absolute";
-        this.gobanLinesDiv.style.width = this.sidePx + "px";
-        this.gobanLinesDiv.style.height = this.sidePx + "px";
-        this.gobanLinesDiv.style.left = this.bandWitdh + "px";
-        this.gobanLinesDiv.style.top = this.bandWitdh + "px";
-        this.gobanLinesDiv.style.backgroundColor = bgColor;
-        this.containerDiv.appendChild(this.gobanLinesDiv);
+        // CROP:
+        var left = 0;
+        var right = 0.;
+        var bottom = 0.;
+        var top = 0;
+        var containerWindowDiv = document.createElement("div");
+        containerWindowDiv.style.position = "relative";
+        containerWindowDiv.style.overflow = "hidden";
+        //containerWindowDiv.style.border = "5px solid red";
+        containerWindowDiv.style.width = (1 - right - left) * (this.sidePx + this.bandWitdh * 2) + "px";
+        containerWindowDiv.style.height = (1 - bottom - top) * (this.sidePx + this.bandWitdh * 2) + "px";
+        this.gobanDiv = document.createElement("div");
+        this.gobanDiv.style.position = "absolute";
+        this.gobanDiv.style.top = (-top) * (this.sidePx + this.bandWitdh * 2) + "px";
+        this.gobanDiv.style.left = (-left) * (this.sidePx + this.bandWitdh * 2) + "px";
+        this.gobanDiv.style.overflow = "hidden";
+        this.gobanDiv.style.marginBottom = -50 + "px";
+        this.gobanDiv.style.backgroundColor = bgColor;
+        this.gobanDiv.style.border = "0.01px solid gray";
+        this.gobanDiv.style.width = this.sidePx + this.bandWitdh * 2 + "px";
+        this.gobanDiv.style.height = this.sidePx + this.bandWitdh * 2 + "px";
+        containerWindowDiv.appendChild(this.gobanDiv);
+        var gobanLinesDiv = document.createElement("div");
+        gobanLinesDiv.style.position = "absolute";
+        gobanLinesDiv.style.width = this.sidePx + "px";
+        gobanLinesDiv.style.height = this.sidePx + "px";
+        gobanLinesDiv.style.left = this.bandWitdh + "px";
+        gobanLinesDiv.style.top = this.bandWitdh + "px";
+        gobanLinesDiv.style.backgroundColor = bgColor;
+        this.gobanDiv.appendChild(gobanLinesDiv);
         for (var i = 0; i < this.boardSize; i++) {
             for (var j = 0; j < 2; j++) {
                 var lineDiv = document.createElement("div");
@@ -225,11 +241,11 @@ var Goban = /** @class */ (function () {
                     lineDiv.style.top = i * this.bandWitdh + "px";
                     lineDiv.style.left = 0 + "px";
                 }
-                this.gobanLinesDiv.appendChild(lineDiv);
+                gobanLinesDiv.appendChild(lineDiv);
             }
         }
-        this.gobanEl.innerHTML = "";
-        this.gobanEl.appendChild(this.containerDiv);
+        this.containerElement.innerHTML = "";
+        this.containerElement.appendChild(containerWindowDiv);
     };
     Goban.prototype.drawBoard = function (position) {
         this.drawStones(this.positions[position % this.positions.length]);
@@ -266,14 +282,14 @@ var Goban = /** @class */ (function () {
             stoneDiv.id = id;
             stoneDiv.style.position = "absolute";
             stoneDiv.style.textAlign = "center";
-            stoneDiv.style.left = (1 + column * this.bandWitdh - 0.5 * this.stoneSide) + "px";
-            stoneDiv.style.top = (1 + row * this.bandWitdh - 0.5 * this.stoneSide) + "px";
+            stoneDiv.style.left = (1 + column) * this.bandWitdh - 0.5 * this.stoneSide + "px";
+            stoneDiv.style.top = (1 + row) * this.bandWitdh - 0.5 * this.stoneSide + "px";
             stoneDiv.style.width = this.stoneSide + "px";
             stoneDiv.style.height = this.stoneSide + "px";
             stoneDiv.onclick = function () {
                 alert("Location " + coordsToSgfCoords(row, column));
             };
-            this.gobanLinesDiv.appendChild(stoneDiv);
+            this.gobanDiv.appendChild(stoneDiv);
         }
         stoneDiv.innerHTML = "";
         var stone = (g.lines[row] || [])[column] || MIDDOT;
