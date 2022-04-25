@@ -139,13 +139,15 @@ var Goban = /** @class */ (function () {
         var _a;
         this.sidePx = sidePx;
         this.positions = [];
+        this.position = 0;
         this.cropTop = 0;
         this.cropRight = 0;
         this.cropBottom = 0;
         this.cropLeft = 0;
         this.drawGoban();
         if ((_a = this.positions) === null || _a === void 0 ? void 0 : _a.length) {
-            this.drawBoard(0);
+            this.position = 0;
+            this.drawBoard();
         }
     }
     Goban.prototype.parseGolangPositions = function (content) {
@@ -254,8 +256,11 @@ var Goban = /** @class */ (function () {
         this.containerElement.innerHTML = "";
         this.containerElement.appendChild(containerWindowDiv);
     };
-    Goban.prototype.drawBoard = function (position) {
-        var n = position % this.positions.length;
+    Goban.prototype.drawBoard = function () {
+        if (this.position >= this.positions.length - 1) {
+            this.stopAnimation();
+        }
+        var n = this.position % this.positions.length;
         this.drawStones(this.positions[n], this.positions[n + 1]);
     };
     Goban.prototype.drawStones = function (g, next) {
@@ -344,17 +349,29 @@ var Goban = /** @class */ (function () {
     };
     Goban.prototype.animate = function (initDelay, interval) {
         var _this = this;
-        this.drawBoard(0);
-        var _loop_1 = function (n) {
-            (function (pos) {
-                setTimeout(function () {
-                    _this.drawBoard(n);
-                }, n == 0 ? initDelay : initDelay + (pos - 1) * interval);
-            })(n);
-        };
-        for (var n = 0; n < this.positions.length; n++) {
-            _loop_1(n);
-        }
+        this.stopAnimation();
+        this.position = 0;
+        this.drawBoard();
+        this.animationTimeout = setTimeout(function () {
+            _this.drawBoard();
+            _this.position++;
+            _this.animationInterval = setInterval(function () {
+                _this.drawBoard();
+                _this.position++;
+            }, interval);
+        }, initDelay);
+    };
+    Goban.prototype.stopAnimation = function () {
+        clearTimeout(this.animationTimeout);
+        clearInterval(this.animationInterval);
+    };
+    Goban.prototype.next = function () {
+        this.position++;
+        this.drawBoard();
+    };
+    Goban.prototype.previous = function () {
+        this.position--;
+        this.drawBoard();
     };
     return Goban;
 }());

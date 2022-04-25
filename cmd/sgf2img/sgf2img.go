@@ -43,6 +43,7 @@ type ctx struct {
 	ankiImport string
 	grayscale  bool
 	mistakes   bool
+	mainLine   bool
 	verbose    bool
 	csvRows    [][]string
 }
@@ -54,7 +55,8 @@ func main() {
 	flag.Int64Var(&(opts.imageSize), "s", 400, "Image size (max goban board image size)")
 	flag.StringVar(&(opts.ankiImport), "a", "", "Create Anki import file")
 	flag.BoolVar(&(opts.grayscale), "g", false, "Grayscale only for png images")
-	flag.BoolVar(&(opts.mistakes), "m", false, "Mistakes to images (assumes that if a node comment starts with 'Mistake' the parent has another branch which is the right path)")
+	flag.BoolVar(&(opts.mistakes), "mi", false, "Mistakes to images (assumes that if a node comment starts with 'Mistake' the parent has another branch which is the right path)")
+	flag.BoolVar(&(opts.mainLine), "ml", false, "Make one image out of the main branch line")
 	flag.BoolVar(&(opts.verbose), "v", false, "Verbose")
 	flag.StringVar(&typ, "t", string(png), fmt.Sprintf("Image type (%s|%s|%s|%s)", png, svg, html, anki))
 	flag.BoolVar(&help, "h", false, "Help")
@@ -102,6 +104,21 @@ func processSgfFile(sgfFn string, opts *ctx) error {
 			return err
 		}
 		fmt.Println("Saved marked file to", fn)
+	}
+	if opts.mainLine {
+		tmpNode := node
+		commentStart, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
+		tmpNode.SetValue(sgfutils.SGFTagComment, commentStart+"\n"+directiveStart[0]+" main_line")
+
+		for true {
+			if len(tmpNode.Children()) > 0 {
+				tmpNode = tmpNode.Children()[0]
+			} else {
+				commentEnd, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
+				tmpNode.SetValue(sgfutils.SGFTagComment, commentEnd+"\n"+directiveEnd[0]+" main_line")
+				break
+			}
+		}
 	}
 
 	if err := walkNodes(sgfFn, node, opts, 0); err != nil {

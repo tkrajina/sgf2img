@@ -275,6 +275,9 @@ class Goban {
 	}
 
 	drawBoard(position: number) {
+		if (position >= this.positions.length - 1) {
+			this.stopAnimation();
+		}
 		const n = position % this.positions.length
 		this.drawStones(this.positions[n], this.positions[n+1]);
 	}
@@ -365,14 +368,27 @@ class Goban {
 		stoneDiv.style.borderRadius = `${this.stoneSide * 0.5}px`;
 	}
 
+	animationTimeout: any;
+	animationInterval: any;
+	position = 0;
+
 	public animate(initDelay?: number, interval?: number) {
+		this.stopAnimation();
 		this.drawBoard(0);
-		for (let n = 0; n < this.positions.length; n++) {
-			((pos: number) => {
-				setTimeout(() => {
-					this.drawBoard(n);
-				}, n == 0 ? initDelay : initDelay + (pos - 1) * interval);
-			})(n);
-		}
+		let n = 0;
+		this.animationTimeout = setTimeout(() => {
+			this.drawBoard(n++);
+			this.animationInterval = setInterval(() => {
+				this.drawBoard(n++);
+			}, interval)
+		}, initDelay);
 	}
+
+	public stopAnimation() {
+		clearTimeout(this.animationTimeout);
+		clearInterval(this.animationInterval);
+	}
+
+	public next() {}
+	public previous() {}
 }
