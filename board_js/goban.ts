@@ -183,7 +183,7 @@ class Goban {
 		for (let line of content.trim().split("\n")) {
 			//console.log("line:", line);
 			if (line.trim().toLowerCase().match(/^crop:.*/)) {
-				const parts = line.split(":")[1].split(/[\s,]/) || ["0","0","0","0"];
+				const parts = line.split(":")[1].trim().split(/[\s,]+/) || ["0","0","0","0"];
 				this.cropTop = parseFloat(parts[0]) || 0;
 				this.cropRight = parseFloat(parts[1]) || 0;
 				this.cropBottom = parseFloat(parts[2]) || 0;
@@ -274,15 +274,25 @@ class Goban {
 		this.containerElement.appendChild(containerWindowDiv);
 	}
 
-	drawBoard(position: number) {
-		if (position >= this.positions.length - 1) {
+	drawBoard(position?: number) {
+		if ("number" === typeof position) {
+			this.position = position as number;
+		}
+		if (this.position >= this.positions.length - 1) {
 			this.stopAnimation();
 		}
-		const n = position % this.positions.length
-		this.drawStones(this.positions[n], this.positions[n+1]);
+		this.position = this.position % this.positions.length
+		if (this.position < 0) {
+			this.position += this.positions.length;
+		}
+		const el = document.getElementById("goban_position")
+		if (el) {
+			el.innerHTML = `${this.position + 1}/${this.positions.length}`;
+		}
+		this.drawStones(this.positions[this.position], this.positions[this.position+1]);
 	}
 
-	drawStones(g: GobanPosition, next: GobanPosition | undefined) {
+	private drawStones(g: GobanPosition, next: GobanPosition | undefined) {
 		for (let col = 0; col < this.boardSize; col++) {
 			for (let row = 0; row < this.boardSize; row++) {
 				this.drawStone(g, row, col);
@@ -377,9 +387,9 @@ class Goban {
 		this.drawBoard(0);
 		let n = 0;
 		this.animationTimeout = setTimeout(() => {
-			this.drawBoard(n++);
+			this.drawBoard(++n);
 			this.animationInterval = setInterval(() => {
-				this.drawBoard(n++);
+				this.drawBoard(++n);
 			}, interval)
 		}, initDelay);
 	}
@@ -389,6 +399,12 @@ class Goban {
 		clearInterval(this.animationInterval);
 	}
 
-	public next() {}
-	public previous() {}
+	public next() {
+		this.stopAnimation();
+		this.drawBoard(this.position + 1);
+	}
+	public previous() {
+		this.stopAnimation();
+		this.drawBoard(this.position - 1);
+	}
 }

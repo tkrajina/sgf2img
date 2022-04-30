@@ -139,15 +139,14 @@ var Goban = /** @class */ (function () {
         var _a;
         this.sidePx = sidePx;
         this.positions = [];
-        this.position = 0;
         this.cropTop = 0;
         this.cropRight = 0;
         this.cropBottom = 0;
         this.cropLeft = 0;
+        this.position = 0;
         this.drawGoban();
         if ((_a = this.positions) === null || _a === void 0 ? void 0 : _a.length) {
-            this.position = 0;
-            this.drawBoard();
+            this.drawBoard(0);
         }
     }
     Goban.prototype.parseGolangPositions = function (content) {
@@ -170,7 +169,7 @@ var Goban = /** @class */ (function () {
             var line = _a[_i];
             //console.log("line:", line);
             if (line.trim().toLowerCase().match(/^crop:.*/)) {
-                var parts = line.split(":")[1].split(/[\s,]/) || ["0", "0", "0", "0"];
+                var parts = line.split(":")[1].trim().split(/[\s,]+/) || ["0", "0", "0", "0"];
                 this.cropTop = parseFloat(parts[0]) || 0;
                 this.cropRight = parseFloat(parts[1]) || 0;
                 this.cropBottom = parseFloat(parts[2]) || 0;
@@ -256,12 +255,22 @@ var Goban = /** @class */ (function () {
         this.containerElement.innerHTML = "";
         this.containerElement.appendChild(containerWindowDiv);
     };
-    Goban.prototype.drawBoard = function () {
+    Goban.prototype.drawBoard = function (position) {
+        if ("number" === typeof position) {
+            this.position = position;
+        }
         if (this.position >= this.positions.length - 1) {
             this.stopAnimation();
         }
-        var n = this.position % this.positions.length;
-        this.drawStones(this.positions[n], this.positions[n + 1]);
+        this.position = this.position % this.positions.length;
+        if (this.position < 0) {
+            this.position += this.positions.length;
+        }
+        var el = document.getElementById("goban_position");
+        if (el) {
+            el.innerHTML = this.position + 1 + "/" + this.positions.length;
+        }
+        this.drawStones(this.positions[this.position], this.positions[this.position + 1]);
     };
     Goban.prototype.drawStones = function (g, next) {
         var _a, _b;
@@ -350,14 +359,12 @@ var Goban = /** @class */ (function () {
     Goban.prototype.animate = function (initDelay, interval) {
         var _this = this;
         this.stopAnimation();
-        this.position = 0;
-        this.drawBoard();
+        this.drawBoard(0);
+        var n = 0;
         this.animationTimeout = setTimeout(function () {
-            _this.drawBoard();
-            _this.position++;
+            _this.drawBoard(++n);
             _this.animationInterval = setInterval(function () {
-                _this.drawBoard();
-                _this.position++;
+                _this.drawBoard(++n);
             }, interval);
         }, initDelay);
     };
@@ -366,12 +373,12 @@ var Goban = /** @class */ (function () {
         clearInterval(this.animationInterval);
     };
     Goban.prototype.next = function () {
-        this.position++;
-        this.drawBoard();
+        this.stopAnimation();
+        this.drawBoard(this.position + 1);
     };
     Goban.prototype.previous = function () {
-        this.position--;
-        this.drawBoard();
+        this.stopAnimation();
+        this.drawBoard(this.position - 1);
     };
     return Goban;
 }());

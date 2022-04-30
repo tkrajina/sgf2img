@@ -8,15 +8,15 @@
         <span id="goban">
 
 <pre>
+.............wb.B.b
+.............wbwwbb
+.............wb..b.
+.............wbbbw.
+..............wwww.
 ...................
 ...................
-...........wbbb....
-........w..w.w.bb..
-...........w..w.w..
-..........bbw...w..
-............bwwbb..
-.............bb....
-................b..
+...................
+...................
 ...................
 ...................
 ...................
@@ -28,19 +28,15 @@
 ...................
 ...................
 AP:Sabaki:0.52.0
-DT:2022-04-23
-FN:books_sgf/dictionar_of_basic_tesujis_1/problem_1.sgf
-C:Black to cut!
-CROP:0 0 .35 .35
+FN:books_sgf/get_strong_life_and_death/Eye_spaces/10_b.sgf
+CROP:0 0 .5 .5
+C:aaa
 --
-5:..........bbw.B.w..
-
+0:.............wbWb.b
+C:bbb
 --
-5:..........bbwWb.w..
-
---
-4:...........wB.w.w..
-
+2:.............wb.Bb.
+C:Ko.
 
 
 
@@ -56,11 +52,12 @@ CROP:0 0 .35 .35
 
         </span>
         <p id="goban_turn"></p>
+        <a href="javascript:void(goban.animate(2000, 1000))">animate</a>
+        <a id="goban_previous" href="javascript:void(goban.previous())">previous</a>
+        <span id="goban_position"></span>
+        <a id="goban_next" href="javascript:void(goban.next())">next</a>
         <p id="goban_comment"></p>
         <script>goban = new Goban(400)</script>
         <script>goban.animate(2000, 1000)</script>
-        <a href="javascript:void(goban.animate(2000, 1000))">animate</a>
-        <a id="goban_next" href="javascript:void(goban.next())">next</a>
-        <a id="goban_previous" href="javascript:void(goban.previous())">previous</a>
     </body>
 </html>
