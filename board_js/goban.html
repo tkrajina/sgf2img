@@ -8,11 +8,10 @@
         <span id="goban">
 
 <pre>
-.............wb.B.b
-.............wbwwbb
-.............wb..b.
-.............wbbbw.
-..............wwww.
+...................
+...................
+..b................
+...................
 ...................
 ...................
 ...................
@@ -28,15 +27,14 @@
 ...................
 ...................
 AP:Sabaki:0.52.0
-FN:books_sgf/get_strong_life_and_death/Eye_spaces/10_b.sgf
-CROP:0 0 .5 .5
-C:aaa
+DT:2022-05-02
+FN:tmp.sgf
+LB:aa:A
+CROP:0 0.63 0.58 0
+
 --
 0:.............wbWb.b
 C:bbb
---
-2:.............wb.Bb.
-C:Ko.
 
 
 
@@ -52,10 +50,12 @@ C:Ko.
 
         </span>
         <p id="goban_turn"></p>
-        <a href="javascript:void(goban.animate(2000, 1000))">animate</a>
-        <a id="goban_previous" href="javascript:void(goban.previous())">previous</a>
+        <a href="javascript:void(goban.animate(500, 500))">animate</a>
+        <a href="javascript:void(goban.first())">first</a>
+        <a href="javascript:void(goban.previous())">previous</a>
         <span id="goban_position"></span>
-        <a id="goban_next" href="javascript:void(goban.next())">next</a>
+        <a href="javascript:void(goban.next())">next</a>
+        <a href="javascript:void(goban.last())">last</a>
         <p id="goban_comment"></p>
         <script>goban = new Goban(400)</script>
         <script>goban.animate(2000, 1000)</script>

@@ -297,6 +297,7 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 					txt += boardAnnotationsToAnki(*node.GetRoot())
 					txt += fmt.Sprintf("FN:%s\n", sgfFilename)
 					txt += nodeAnnotationsToAnki(node)
+					txt += autocropAnki(animatedNodes)
 				} else {
 					prev := strings.Split(boardToAnki(animatedNodes[n-1]), "\n")
 					this := strings.Split(boardToAnki(node), "\n")
@@ -317,6 +318,103 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 	}
 
 	return nil
+}
+
+func autocropAnki(nodes []sgf.Node) string {
+	var bm boardMargins
+	for n := range nodes {
+		if n == 0 {
+			bm = margins(*nodes[n].Board())
+		} else {
+			bm.add(margins(*nodes[n].Board()))
+		}
+	}
+	//size := float64(nodes[0].Board().Size)
+	//fmt.Printf("%#v\n", bm)
+	return bm.cropLine(nodes[0].Board().Size)
+	//return fmt.Sprintf("CROP:%.2f %.2f %.2f %.2f\n", float64(bm.top)/float64(size), float64(bm.left)/size, float64(bm.bottom)/size, float64(bm.right)/size)
+}
+
+type boardMargins struct{ top, right, bottom, left int }
+
+func (gm *boardMargins) add(bm2 boardMargins) {
+
+}
+
+func (bm boardMargins) cropValue(lines, size int) string {
+	if lines < 6 {
+		return "0" // If close to border => no crop
+	}
+	val := float64(lines-4) / float64(size)
+	if val <= 0 {
+		return "0"
+	}
+	return fmt.Sprintf("%.2f", val)
+}
+
+func (bm boardMargins) cropLine(size int) string {
+	return fmt.Sprintf("CROP:%s %s %s %s\n",
+		bm.cropValue(bm.top, size),
+		bm.cropValue(bm.right, size),
+		bm.cropValue(bm.bottom, size),
+		bm.cropValue(bm.left, size),
+	)
+}
+
+func margins(b sgf.Board) boardMargins {
+	res := boardMargins{0, 0, 0, 0}
+
+	positions := [][]sgf.Colour{}
+	for x := 0; x < b.Size; x++ {
+		positions = append(positions, []sgf.Colour{})
+		for y := 0; y < b.Size; y++ {
+			pos := b.Get(sgf.Point(y, x))
+			positions[len(positions)-1] = append(positions[len(positions)-1], pos)
+		}
+		//fmt.Println(positions[len(positions)-1])
+	}
+
+top_loop:
+	for i := 0; i < b.Size; i++ {
+		for j := 0; j < b.Size; j++ {
+			if positions[i][j] != sgf.EMPTY {
+				res.top = i
+				break top_loop
+			}
+		}
+	}
+
+bottom_loop:
+	for i := 0; i < b.Size; i++ {
+		for j := 0; j < b.Size; j++ {
+			if positions[b.Size-i-1][j] != sgf.EMPTY {
+				res.bottom = i
+				break bottom_loop
+			}
+		}
+	}
+
+right_loop:
+	for i := 0; i < b.Size; i++ {
+		for j := 0; j < b.Size; j++ {
+			if positions[j][b.Size-i-1] != sgf.EMPTY {
+				res.right = i
+				break right_loop
+			}
+		}
+	}
+
+left_loop:
+	for i := 0; i < b.Size; i++ {
+		for j := 0; j < b.Size; j++ {
+			if positions[j][i] != sgf.EMPTY {
+				res.left = i
+				break left_loop
+			}
+		}
+	}
+
+	return res
 }
 
 func crop(img image.Image, cm commentImage, board sgf.Board, opts ctx) image.Image {

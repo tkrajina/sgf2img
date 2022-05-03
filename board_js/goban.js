@@ -281,10 +281,10 @@ var Goban = /** @class */ (function () {
         }
         var turnEl = document.getElementById("goban_turn");
         if (turnEl) {
-            if (next.blackPlays) {
+            if (next === null || next === void 0 ? void 0 : next.blackPlays) {
                 turnEl.innerHTML = "<strong>WHITE</strong> to play";
             }
-            else if (next.whitePlays) {
+            else if (next === null || next === void 0 ? void 0 : next.whitePlays) {
                 turnEl.innerHTML = "<strong>BLACK<strong> to play";
             }
             else {
@@ -292,6 +292,7 @@ var Goban = /** @class */ (function () {
             }
         }
         var commentsEl = document.getElementById("goban_comment");
+        console.log("draw with comment" + g.tags[SGFTag.Comment]);
         if (commentsEl) {
             commentsEl.innerHTML = ((_b = (_a = g.tags[SGFTag.Comment]) === null || _a === void 0 ? void 0 : _a.map(function (el) { return el.split("\\n").join("<br/>"); })) === null || _b === void 0 ? void 0 : _b.join("<br/>")) || "";
         }
@@ -345,7 +346,7 @@ var Goban = /** @class */ (function () {
                     centerDiv.style.color = whiteStoneColor;
                     break;
                 default:
-                    centerDiv.style.color = "red";
+                    centerDiv.style.color = blackStoneColor;
             }
             centerDiv.style.left = "50%";
             centerDiv.style.top = "50%";
@@ -363,6 +364,9 @@ var Goban = /** @class */ (function () {
         var n = 0;
         this.animationTimeout = setTimeout(function () {
             _this.drawBoard(++n);
+            if (n >= _this.positions.length - 1) {
+                return;
+            }
             _this.animationInterval = setInterval(function () {
                 _this.drawBoard(++n);
             }, interval);
@@ -379,6 +383,14 @@ var Goban = /** @class */ (function () {
     Goban.prototype.previous = function () {
         this.stopAnimation();
         this.drawBoard(this.position - 1);
+    };
+    Goban.prototype.first = function () {
+        this.stopAnimation();
+        this.drawBoard(0);
+    };
+    Goban.prototype.last = function () {
+        this.stopAnimation();
+        this.drawBoard(this.positions.length - 1);
     };
     return Goban;
 }());

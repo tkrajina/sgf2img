@@ -300,15 +300,16 @@ class Goban {
 		}
 		let turnEl = document.getElementById("goban_turn");
 		if (turnEl) {
-			if (next.blackPlays) {
+			if (next?.blackPlays) {
 				turnEl.innerHTML = "<strong>WHITE</strong> to play";
-			} else if (next.whitePlays) {
+			} else if (next?.whitePlays) {
 				turnEl.innerHTML = "<strong>BLACK<strong> to play";
 			} else {
 				turnEl.innerHTML = "...";
 			}
 		}
 		let commentsEl = document.getElementById("goban_comment");
+		console.log("draw with comment" + g.tags[SGFTag.Comment]);
 		if (commentsEl) {
 			commentsEl.innerHTML = g.tags[SGFTag.Comment]?.map(el => el.split("\\n").join("<br/>"))?.join("<br/>") || "";
 		}
@@ -365,7 +366,7 @@ class Goban {
 				centerDiv.style.color = whiteStoneColor;
 				break;
 			default:
-				centerDiv.style.color = "red";
+				centerDiv.style.color = blackStoneColor;
 			}
 			centerDiv.style.left = "50%";
 			centerDiv.style.top = "50%";
@@ -388,6 +389,9 @@ class Goban {
 		let n = 0;
 		this.animationTimeout = setTimeout(() => {
 			this.drawBoard(++n);
+			if (n >= this.positions.length - 1) {
+				return;
+			}
 			this.animationInterval = setInterval(() => {
 				this.drawBoard(++n);
 			}, interval)
@@ -406,5 +410,13 @@ class Goban {
 	public previous() {
 		this.stopAnimation();
 		this.drawBoard(this.position - 1);
+	}
+	public first() {
+		this.stopAnimation();
+		this.drawBoard(0);
+	}
+	public last() {
+		this.stopAnimation();
+		this.drawBoard(this.positions.length - 1);
 	}
 }
