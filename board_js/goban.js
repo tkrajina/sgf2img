@@ -430,7 +430,7 @@ var Goban = /** @class */ (function () {
     };
     Goban.prototype.sgf = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var sgf, n, pos, tag, _i, _a, val, lineNo, line, columnNo, loc, e_1;
+            var sgf, n, pos, tag, _i, _a, val, lineNo, line, columnNo, loc, e_1, commentsEl, textarea;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -483,8 +483,12 @@ var Goban = /** @class */ (function () {
                         return [3 /*break*/, 4];
                     case 3:
                         e_1 = _b.sent();
-                        alert("Error copying to clipboard:" + e_1);
-                        alert(e_1);
+                        commentsEl = document.getElementById("goban_comment");
+                        commentsEl.innerHTML = "SGF:<br/>";
+                        textarea = document.createElement("textarea");
+                        textarea.value = sgf;
+                        commentsEl.appendChild(textarea);
+                        textarea.select();
                         return [3 /*break*/, 4];
                     case 4: return [2 /*return*/];
                 }

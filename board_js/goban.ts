@@ -463,8 +463,12 @@ class Goban {
 			await navigator.clipboard.writeText(sgf);
 			alert("Copied to clipboard");
 		} catch (e) {
-			alert("Error copying to clipboard:" + e);
-			alert(e);
+			let commentsEl = document.getElementById("goban_comment");
+			commentsEl.innerHTML = "SGF:<br/>";
+			const textarea = document.createElement("textarea")
+			textarea.value = sgf;
+			commentsEl.appendChild(textarea);
+			textarea.select();
 		}
 	}
 
