@@ -1,3 +1,4 @@
 goban_*png
 .DS_Store
 TODO.md
+.vscode/*
