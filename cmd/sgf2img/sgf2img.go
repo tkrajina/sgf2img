@@ -144,10 +144,11 @@ func animatePng(images []image.Image, fn string) error {
 		a.Frames[n].Image = images[n]
 		if n < len(images)-1 {
 			a.Frames[n].DelayNumerator = 1
+			a.Frames[n].DelayDenominator = 20
 		} else {
 			a.Frames[n].DelayNumerator = 6
+			a.Frames[n].DelayDenominator = 2
 		}
-		a.Frames[n].DelayDenominator = 2
 	}
 	// Write APNG to our output file
 	return apng.Encode(out, a)
@@ -156,7 +157,7 @@ func animatePng(images []image.Image, fn string) error {
 func exportedImgFilename(sgfFn, name, suffix, extension string) string {
 	dir, file := path.Split(sgfFn)
 	base := strings.Replace(file, path.Ext(file), "", 1)
-	return path.Join(dir, strings.Trim("sgf2img_goban_"+base+"_"+name+"_"+suffix, "_")+"."+extension)
+	return path.Join(dir, strings.Trim("sgf2img_"+base+"_"+name+"_"+suffix, "_")+"."+extension)
 }
 
 func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) error {
