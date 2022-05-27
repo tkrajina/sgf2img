@@ -94,13 +94,13 @@ class GobanPosition {
 		if (line.match(/^[\.wbWB]{5,}$/)) {
 			console.log("board line:", line);
 			this.lines.push(line);
-			this.whitePlays = line.indexOf("B") > 0
+			this.whitePlays = line.indexOf("B") >= 0
 			this.blackPlays = line.indexOf("W") >= 0
 		} else if (line.match(/^\d+:.*/)) {
 			console.log("diff line:", line);
 			const parts = line.split(":");
 			this.lines[parseInt(parts[0])] = parts[1]
-			this.whitePlays = line.indexOf("B") > 0
+			this.whitePlays = line.indexOf("B") >= 0
 			this.blackPlays = line.indexOf("W") >= 0
 		} else if (line.toLocaleLowerCase().match(/crop:.*/)) {
 		} else if (line.match(/\w+:.*/)) {
@@ -203,7 +203,7 @@ class Goban {
 			} else {
 				if (res[res.length - 1].lines.length == 0) {
 					for (const line of res[res.length - 2].lines) {
-						res[res.length - 1].lines.push(line.toLowerCase());
+						res[res.length - 1].lines.push(line);
 					}
 				}
 				res[res.length - 1].parseLine(line);
@@ -418,5 +418,58 @@ class Goban {
 	public last() {
 		this.stopAnimation();
 		this.drawBoard(this.positions.length - 1);
+	}
+
+	public async sgf() {
+		let sgf = "(";
+		for (let n = 0; n < this.positions.length; n++) {
+			if (n > 0) {
+				sgf += "\n;"
+			}
+			const pos = this.positions[n];
+			for (const tag in pos.tags) {
+				for (let val of pos.tags[tag]) {
+					sgf += "\n" + `${tag}[${val}]`;
+				}
+			}
+			for (let lineNo = 0; lineNo < pos.lines.length; lineNo++) {
+				const line = pos.lines[lineNo].trim();
+				console.log("line:", line);
+				for (let columnNo = 0; columnNo < line.length; columnNo++) {
+					const loc = line[columnNo];
+					switch (loc) {
+						case "w":
+							if (n == 0) {
+								sgf += "\n" + `AW[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							}
+							break;
+						case "W":
+							sgf += "\n" + `W[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							break;
+						case "b":
+							if (n == 0) {
+								sgf += "\n" + `AB[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							}
+							break;
+						case "B":
+							sgf += "\n" + `B[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							break;
+					}
+				}
+			}
+		}
+		sgf += "\n)";
+		try {
+			await navigator.clipboard.writeText(sgf);
+			alert("Copied to clipboard");
+		} catch (e) {
+			alert("Error copying to clipboard:" + e);
+			alert(e);
+		}
+	}
+
+	private toSgfCoordinates(lineNo: number, columnNo: number) {
+		const coords = "abcdefghijklmnopqrs";
+		return coords[columnNo] + coords[lineNo];
 	}
 }
