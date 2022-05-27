@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,7 +12,7 @@ import (
 	"github.com/tkrajina/sgf2img/sgfutils"
 )
 
-const board = `...................
+const _board = `...................
 ..............www..
 ...w......b.w.bwb..
 ..............bbb..
@@ -70,6 +72,23 @@ func panicIfErr(err error) {
 }
 
 func main() {
+
+	fmt.Println("Paste here (ctrl+d to finish):")
+	board := ""
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		board += scanner.Text() + "\n"
+		//fmt.Println()
+	}
+
+	if scanner.Err() != nil {
+		panicIfErr(scanner.Err())
+	}
+
+	fmt.Println("----------------------------------------------------------------------------------------------------")
+	fmt.Println(board)
+	fmt.Println("----------------------------------------------------------------------------------------------------")
+
 	node := sgf.NewTree(19)
 	node.Board().AddStone(sgf.Point(0, 0), sgf.BLACK)
 
@@ -110,16 +129,23 @@ func main() {
 				for columNo, rune := range []rune(line) {
 					coords := sgf.Point(columNo, lineNo)
 					switch rune {
+					case 'B':
+						node, err = node.PlayColour(coords, sgf.BLACK)
+						panicIfErr(err)
+					case 'W':
+						node, err = node.PlayColour(coords, sgf.WHITE)
+						panicIfErr(err)
+					}
+				}
+			}
+			for lineNo, line := range initialBoard {
+				for columNo, rune := range []rune(line) {
+					coords := sgf.Point(columNo, lineNo)
+					switch rune {
 					case 'b':
 						node.AddValue(sgfutils.SGFTagAddBlack, coords)
-					case 'B':
-						_, err := node.PlayColour(coords, sgf.BLACK)
-						panicIfErr(err)
 					case 'w':
 						node.AddValue(sgfutils.SGFTagAddWhite, coords)
-					case 'W':
-						_, err := node.PlayColour(coords, sgf.WHITE)
-						panicIfErr(err)
 					}
 				}
 			}
