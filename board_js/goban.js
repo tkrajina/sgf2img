@@ -227,7 +227,7 @@ var Goban = /** @class */ (function () {
                 if (res[res.length - 1].lines.length == 0) {
                     for (var _b = 0, _c = res[res.length - 2].lines; _b < _c.length; _b++) {
                         var line_1 = _c[_b];
-                        res[res.length - 1].lines.push(line_1);
+                        res[res.length - 1].lines.push(line_1.toLowerCase());
                     }
                 }
                 res[res.length - 1].parseLine(line);

@@ -203,7 +203,7 @@ class Goban {
 			} else {
 				if (res[res.length - 1].lines.length == 0) {
 					for (const line of res[res.length - 2].lines) {
-						res[res.length - 1].lines.push(line);
+						res[res.length - 1].lines.push(line.toLowerCase());
 					}
 				}
 				res[res.length - 1].parseLine(line);
@@ -469,6 +469,20 @@ class Goban {
 			textarea.value = sgf;
 			commentsEl.appendChild(textarea);
 			textarea.select();
+			/* Not working in anki:
+			var element = document.createElement('a');
+			element.setAttribute('href', 'data:application/x-go-sgf;charset=utf-8,' + encodeURIComponent(sgf));
+			const fileName = new Date().toJSON().replace(/[^\d]/g, "") + ".sgf";
+			element.setAttribute('download', fileName);
+		  
+			element.style.display = 'none';
+			document.body.appendChild(element);
+		  
+			element.click();
+		  
+			document.body.removeChild(element);
+			alert("Downloaded " + fileName);
+			*/
 		}
 	}
 
