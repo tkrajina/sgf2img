@@ -444,7 +444,9 @@ class Goban {
 							}
 							break;
 						case "W":
-							sgf += "\n" + `W[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							if (!pos.tags["W"]) {
+								sgf += "\n" + `W[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							}
 							break;
 						case "b":
 							if (n == 0) {
@@ -452,7 +454,9 @@ class Goban {
 							}
 							break;
 						case "B":
-							sgf += "\n" + `B[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							if (!pos.tags["B"]) {
+								sgf += "\n" + `B[${this.toSgfCoordinates(lineNo, columnNo)}]`
+							}
 							break;
 					}
 				}

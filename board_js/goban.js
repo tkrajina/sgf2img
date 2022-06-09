@@ -458,7 +458,9 @@ var Goban = /** @class */ (function () {
                                             }
                                             break;
                                         case "W":
-                                            sgf += "\n" + ("W[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                                            if (!pos.tags["W"]) {
+                                                sgf += "\n" + ("W[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                                            }
                                             break;
                                         case "b":
                                             if (n == 0) {
@@ -466,7 +468,9 @@ var Goban = /** @class */ (function () {
                                             }
                                             break;
                                         case "B":
-                                            sgf += "\n" + ("B[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                                            if (!pos.tags["B"]) {
+                                                sgf += "\n" + ("B[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                                            }
                                             break;
                                     }
                                 }
