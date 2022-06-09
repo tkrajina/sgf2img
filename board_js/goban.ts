@@ -272,6 +272,7 @@ class Goban {
 
 		this.containerElement.innerHTML = "";
 		this.containerElement.appendChild(containerWindowDiv);
+		this.drawHoshi();
 	}
 
 	drawBoard(position?: number) {
@@ -290,6 +291,36 @@ class Goban {
 			el.innerHTML = `${this.position + 1}/${this.positions.length}`;
 		}
 		this.drawStones(this.positions[this.position], this.positions[this.position+1]);
+	}
+
+	private drawHoshi() {
+		const hoshiRadious = this.stoneSide / 4;
+		let hoshiPositions: [number, number][]  = [
+			[3, 3],
+			[3, 9],
+			[3, 15],
+			[9, 3],
+			[9, 9],
+			[9, 15],
+			[15, 3],
+			[15, 9],
+			[15, 15],
+		];
+		for (const pos of hoshiPositions) {
+			let row = pos[0], column = pos[1];
+			const id = `hoshi-${row}-${column}`;
+			const hoshiDiv = document.createElement("div");
+			hoshiDiv.id = id;
+			hoshiDiv.style.position = "absolute";
+			hoshiDiv.style.textAlign = "center";
+			hoshiDiv.style.left = `${1.5 + (1 + column) * this.bandWitdh - 0.5 * hoshiRadious}px`;
+			hoshiDiv.style.top = `${0.5 + (1 + row) * this.bandWitdh - 0.5 * hoshiRadious}px`;
+			hoshiDiv.style.width = `${hoshiRadious}px`;
+			hoshiDiv.style.height = `${hoshiRadious}px`;
+			hoshiDiv.style.backgroundColor = blackStoneColor;
+			hoshiDiv.style.borderRadius = `${hoshiRadious * 0.5}px`;
+			this.gobanDiv.appendChild(hoshiDiv);
+		}
 	}
 
 	private drawStones(g: GobanPosition, next: GobanPosition | undefined) {
