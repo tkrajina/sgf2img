@@ -193,11 +193,7 @@ var Goban = /** @class */ (function () {
             replace(/<div.*?>/g, "\n").
             replace(/<br.*?>/g, "\n").
             replace(/<p.*?>/g, "\n").
-            replace(/<.*?>/g, "").
-            replace(/·/g, ".").
-            replace(/●/g, "b").
-            replace(/○/g, "w").
-            replace(/↩/g, "\n");
+            replace(/<.*?>/g, "");
         console.log("AFTER:");
         console.log(content);
         var res = [];
