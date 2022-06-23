@@ -80,8 +80,8 @@ class GobanPosition {
 	lines: string[] = [];
 	tags: {[tag: string]: string[]} = {};
 	labelsByLocations: {[coordinates: string]: string} = {};
-	whitePlays = false;
-	blackPlays = false;
+	whiteNext = false;
+	blackNext = false;
 
 	constructor() {
 	}
@@ -94,14 +94,14 @@ class GobanPosition {
 		if (line.match(/^[\.wbWB]{5,}$/)) {
 			console.log("board line:", line);
 			this.lines.push(line);
-			this.whitePlays = line.indexOf("B") >= 0
-			this.blackPlays = line.indexOf("W") >= 0
+			if (line.indexOf("B") >= 0) this.whiteNext = true;
+			if (line.indexOf("W") >= 0) this.blackNext = true;
 		} else if (line.match(/^\d+:.*/)) {
 			console.log("diff line:", line);
 			const parts = line.split(":");
 			this.lines[parseInt(parts[0])] = parts[1]
-			this.whitePlays = line.indexOf("B") >= 0
-			this.blackPlays = line.indexOf("W") >= 0
+			if (line.indexOf("B") >= 0) this.whiteNext = true;
+			if (line.indexOf("W") >= 0) this.blackNext = true;
 		} else if (line.toLocaleLowerCase().match(/crop:.*/)) {
 		} else if (line.match(/\w+:.*/)) {
 			console.log("tag line:", line);
@@ -132,10 +132,10 @@ class GobanPosition {
 		}
 
 		if (this.tags[SGFTag.WhiteMove]) {
-			this.blackPlays = true;
+			this.blackNext = true;
 		}
 		if (this.tags[SGFTag.BlackMove]) {
-			this.whitePlays = true;
+			this.whiteNext = true;
 		}
 
 	}
@@ -175,7 +175,7 @@ class Goban {
 			replace(/<.*?>/g, "");
 		console.log("AFTER:");
 		console.log(content);
-		const res: GobanPosition[] = [];
+		const res: GobanPosition[] = [new GobanPosition()];
 		for (let line of content.trim().split("\n")) {
 			//console.log("line:", line);
 			if (line.trim().toLowerCase().match(/^crop:.*/)) {
@@ -185,9 +185,6 @@ class Goban {
 				this.cropBottom = parseFloat(parts[2]) || 0;
 				this.cropLeft = parseFloat(parts[3]) || 0;
 				continue;
-			}
-			if (res.length == 0) {
-				res.push(new GobanPosition());
 			}
 			line = line.trim();
 			if (line.indexOf("--") == 0) {
@@ -286,7 +283,7 @@ class Goban {
 		if (el) {
 			el.innerHTML = `${this.position + 1}/${this.positions.length}`;
 		}
-		this.drawStones(this.positions[this.position], this.positions[this.position+1]);
+		this.drawStones(this.positions[this.position]);
 	}
 
 	private drawHoshi() {
@@ -319,7 +316,7 @@ class Goban {
 		}
 	}
 
-	private drawStones(g: GobanPosition, next: GobanPosition | undefined) {
+	private drawStones(g: GobanPosition) {
 		for (let col = 0; col < this.boardSize; col++) {
 			for (let row = 0; row < this.boardSize; row++) {
 				this.drawStone(g, row, col);
@@ -345,10 +342,10 @@ class Goban {
 			nextStoneDiv.style.width = `${radius}px`;
 			nextStoneDiv.style.height = `${radius}px`;
 
-			if (next?.blackPlays) {
+			if (g.blackNext) {
 				nextStoneDiv.style.backgroundColor = blackStoneColor;
 				nextStoneBgDiv.appendChild(nextStoneDiv);
-			} else if (next?.whitePlays) {
+			} else if (g.whiteNext) {
 				nextStoneDiv.style.backgroundColor = whiteStoneColor;
 				nextStoneBgDiv.appendChild(nextStoneDiv);
 			}

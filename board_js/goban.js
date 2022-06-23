@@ -109,8 +109,8 @@ var GobanPosition = /** @class */ (function () {
         this.lines = [];
         this.tags = {};
         this.labelsByLocations = {};
-        this.whitePlays = false;
-        this.blackPlays = false;
+        this.whiteNext = false;
+        this.blackNext = false;
     }
     GobanPosition.prototype.size = function () {
         var _a;
@@ -120,15 +120,19 @@ var GobanPosition = /** @class */ (function () {
         if (line.match(/^[\.wbWB]{5,}$/)) {
             console.log("board line:", line);
             this.lines.push(line);
-            this.whitePlays = line.indexOf("B") >= 0;
-            this.blackPlays = line.indexOf("W") >= 0;
+            if (line.indexOf("B") >= 0)
+                this.whiteNext = true;
+            if (line.indexOf("W") >= 0)
+                this.blackNext = true;
         }
         else if (line.match(/^\d+:.*/)) {
             console.log("diff line:", line);
             var parts = line.split(":");
             this.lines[parseInt(parts[0])] = parts[1];
-            this.whitePlays = line.indexOf("B") >= 0;
-            this.blackPlays = line.indexOf("W") >= 0;
+            if (line.indexOf("B") >= 0)
+                this.whiteNext = true;
+            if (line.indexOf("W") >= 0)
+                this.blackNext = true;
         }
         else if (line.toLocaleLowerCase().match(/crop:.*/)) {
         }
@@ -162,10 +166,10 @@ var GobanPosition = /** @class */ (function () {
             console.error("Invalid line: " + line);
         }
         if (this.tags[SGFTag.WhiteMove]) {
-            this.blackPlays = true;
+            this.blackNext = true;
         }
         if (this.tags[SGFTag.BlackMove]) {
-            this.whitePlays = true;
+            this.whiteNext = true;
         }
     };
     return GobanPosition;
@@ -196,7 +200,7 @@ var Goban = /** @class */ (function () {
             replace(/<.*?>/g, "");
         console.log("AFTER:");
         console.log(content);
-        var res = [];
+        var res = [new GobanPosition()];
         for (var _i = 0, _a = content.trim().split("\n"); _i < _a.length; _i++) {
             var line = _a[_i];
             //console.log("line:", line);
@@ -207,9 +211,6 @@ var Goban = /** @class */ (function () {
                 this.cropBottom = parseFloat(parts[2]) || 0;
                 this.cropLeft = parseFloat(parts[3]) || 0;
                 continue;
-            }
-            if (res.length == 0) {
-                res.push(new GobanPosition());
             }
             line = line.trim();
             if (line.indexOf("--") == 0) {
@@ -303,7 +304,7 @@ var Goban = /** @class */ (function () {
         if (el) {
             el.innerHTML = this.position + 1 + "/" + this.positions.length;
         }
-        this.drawStones(this.positions[this.position], this.positions[this.position + 1]);
+        this.drawStones(this.positions[this.position]);
     };
     Goban.prototype.drawHoshi = function () {
         var hoshiRadious = this.stoneSide / 4;
@@ -335,7 +336,7 @@ var Goban = /** @class */ (function () {
             this.gobanDiv.appendChild(hoshiDiv);
         }
     };
-    Goban.prototype.drawStones = function (g, next) {
+    Goban.prototype.drawStones = function (g) {
         var _a, _b;
         for (var col = 0; col < this.boardSize; col++) {
             for (var row = 0; row < this.boardSize; row++) {
@@ -360,11 +361,11 @@ var Goban = /** @class */ (function () {
             nextStoneDiv.style.left = (radius * padding / 2) + "px";
             nextStoneDiv.style.width = radius + "px";
             nextStoneDiv.style.height = radius + "px";
-            if (next === null || next === void 0 ? void 0 : next.blackPlays) {
+            if (g.blackNext) {
                 nextStoneDiv.style.backgroundColor = blackStoneColor;
                 nextStoneBgDiv.appendChild(nextStoneDiv);
             }
-            else if (next === null || next === void 0 ? void 0 : next.whitePlays) {
+            else if (g.whiteNext) {
                 nextStoneDiv.style.backgroundColor = whiteStoneColor;
                 nextStoneBgDiv.appendChild(nextStoneDiv);
             }
