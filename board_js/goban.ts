@@ -202,6 +202,13 @@ class Goban {
 				res[res.length - 1].parseLine(line);
 			}
 		}
+
+		// If first position has no last move:
+		if (res.length > 1 && !res[0].whiteNext && !res[0].blackNext) {
+			res[0].blackNext = !res[1].blackNext
+			res[0].whiteNext = !res[1].whiteNext
+		}
+	
 		return res;
 	}
 
