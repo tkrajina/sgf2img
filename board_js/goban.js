@@ -344,15 +344,31 @@ var Goban = /** @class */ (function () {
         }
         var turnEl = document.getElementById("goban_turn");
         if (turnEl) {
+            var radius = 20;
+            var padding = .25;
+            turnEl.innerHTML = "";
+            var nextStoneBgDiv = document.createElement("div");
+            var nextStoneDiv = document.createElement("div");
+            nextStoneBgDiv.style.backgroundColor = bgColor;
+            nextStoneBgDiv.style.width = radius * (1 + padding) + "px";
+            nextStoneBgDiv.style.height = radius * (1 + padding) + "px";
+            nextStoneBgDiv.style.color = blackStoneColor;
+            nextStoneBgDiv.style.position = "relative";
+            nextStoneDiv.style.borderRadius = (radius / 2) + "px";
+            nextStoneDiv.style.position = "absolute";
+            nextStoneDiv.style.top = (radius * padding / 2) + "px";
+            nextStoneDiv.style.left = (radius * padding / 2) + "px";
+            nextStoneDiv.style.width = radius + "px";
+            nextStoneDiv.style.height = radius + "px";
             if (next === null || next === void 0 ? void 0 : next.blackPlays) {
-                turnEl.innerHTML = "<strong>WHITE</strong> to play";
+                nextStoneDiv.style.backgroundColor = blackStoneColor;
+                nextStoneBgDiv.appendChild(nextStoneDiv);
             }
             else if (next === null || next === void 0 ? void 0 : next.whitePlays) {
-                turnEl.innerHTML = "<strong>BLACK<strong> to play";
+                nextStoneDiv.style.backgroundColor = whiteStoneColor;
+                nextStoneBgDiv.appendChild(nextStoneDiv);
             }
-            else {
-                turnEl.innerHTML = "...";
-            }
+            turnEl.appendChild(nextStoneBgDiv);
         }
         var commentsEl = document.getElementById("goban_comment");
         console.log("draw with comment" + g.tags[SGFTag.Comment]);

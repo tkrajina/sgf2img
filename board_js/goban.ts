@@ -327,13 +327,32 @@ class Goban {
 		}
 		let turnEl = document.getElementById("goban_turn");
 		if (turnEl) {
+			const radius = 20;
+			const padding = .25
+			turnEl.innerHTML = "";
+			const nextStoneBgDiv = document.createElement("div");
+			const nextStoneDiv = document.createElement("div");
+			nextStoneBgDiv.style.backgroundColor = bgColor;
+			nextStoneBgDiv.style.width = `${radius * (1+padding)}px`;
+			nextStoneBgDiv.style.height = `${radius * (1 + padding)}px`;
+			nextStoneBgDiv.style.color = blackStoneColor;
+			nextStoneBgDiv.style.position = "relative";
+
+			nextStoneDiv.style.borderRadius = (radius / 2) + "px";
+			nextStoneDiv.style.position = "absolute";
+			nextStoneDiv.style.top = `${(radius * padding / 2)}px`;
+			nextStoneDiv.style.left = `${(radius * padding / 2)}px`;
+			nextStoneDiv.style.width = `${radius}px`;
+			nextStoneDiv.style.height = `${radius}px`;
+
 			if (next?.blackPlays) {
-				turnEl.innerHTML = "<strong>WHITE</strong> to play";
+				nextStoneDiv.style.backgroundColor = blackStoneColor;
+				nextStoneBgDiv.appendChild(nextStoneDiv);
 			} else if (next?.whitePlays) {
-				turnEl.innerHTML = "<strong>BLACK<strong> to play";
-			} else {
-				turnEl.innerHTML = "...";
+				nextStoneDiv.style.backgroundColor = whiteStoneColor;
+				nextStoneBgDiv.appendChild(nextStoneDiv);
 			}
+			turnEl.appendChild(nextStoneBgDiv);
 		}
 		let commentsEl = document.getElementById("goban_comment");
 		console.log("draw with comment" + g.tags[SGFTag.Comment]);
