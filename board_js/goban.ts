@@ -162,6 +162,7 @@ class Goban {
 		if (this.positions?.length) {
 			this.drawBoard(0);
 		}
+		this.initDownloadLink();
 	}
 
 	private parseGolangPositions(content: string) {
@@ -470,7 +471,7 @@ class Goban {
 		this.drawBoard(this.positions.length - 1);
 	}
 
-	public async sgf() {
+	public initDownloadLink() {
 		let sgf = "(";
 		for (let n = 0; n < this.positions.length; n++) {
 			if (n > 0) {
@@ -479,7 +480,9 @@ class Goban {
 			const pos = this.positions[n];
 			for (const tag in pos.tags) {
 				for (let val of pos.tags[tag]) {
-					sgf += "\n" + `${tag}[${val}]`;
+					if (tag[0].match(/[a-z]/i)) {
+						sgf += "\n" + `${tag}[${val}]`;
+					}
 				}
 			}
 			for (let lineNo = 0; lineNo < pos.lines.length; lineNo++) {
@@ -513,30 +516,53 @@ class Goban {
 			}
 		}
 		sgf += "\n)";
+		/* Doesn't work in Anki (only in the browser):
+		try {
+			var element = document.createElement('a');
+			element.innerHTML = "Download SGF";
+			element.setAttribute('href', 'data:application/x-go-sgf;charset=utf-8,' + encodeURIComponent(sgf));
+			const fileName = new Date().toJSON().replace(/[^\d]/g, "") + ".sgf";
+			element.setAttribute('download', fileName);
+
+			//element.style.display = 'none';
+			//document.body.appendChild(element);
+			//element.click();
+			//document.body.removeChild(element);
+
+			let commentsEl = document.getElementById("goban_comment");
+			commentsEl.innerHTML = "";
+			commentsEl?.appendChild(element);
+		} catch (e) {
+			console.error(e);
+		}
+		*/
+
+		/* Not working in anki (mobile):
 		try {
 			await navigator.clipboard.writeText(sgf);
 			alert("Copied to clipboard");
 		} catch (e) {
+			console.error(e);
+		}
+		*/
+
+		/*
+		try {
 			let commentsEl = document.getElementById("goban_comment");
 			commentsEl.innerHTML = "SGF:<br/>";
 			const textarea = document.createElement("textarea")
 			textarea.value = sgf;
 			commentsEl.appendChild(textarea);
 			textarea.select();
-			/* Not working in anki:
-			var element = document.createElement('a');
-			element.setAttribute('href', 'data:application/x-go-sgf;charset=utf-8,' + encodeURIComponent(sgf));
-			const fileName = new Date().toJSON().replace(/[^\d]/g, "") + ".sgf";
-			element.setAttribute('download', fileName);
-		  
-			element.style.display = 'none';
-			document.body.appendChild(element);
-		  
-			element.click();
-		  
-			document.body.removeChild(element);
-			alert("Downloaded " + fileName);
-			*/
+		} catch (e) {
+			console.error(e);
+		}
+		*/
+
+		var element = document.getElementById("sgf_editor");
+		if (element) {
+			const url = 'https://tkrajina.github.io/besogo/anki.html?sgf=' + encodeURIComponent(sgf)
+			element.setAttribute('href', url);
 		}
 	}
 
