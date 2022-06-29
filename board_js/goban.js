@@ -442,8 +442,8 @@ var Goban = /** @class */ (function () {
         this.stopAnimation();
         this.drawBoard(this.positions.length - 1);
     };
-    Goban.prototype.initDownloadLink = function () {
-        var sgf = "(";
+    Goban.prototype.toSgf = function () {
+        var sgf = "(;";
         for (var n = 0; n < this.positions.length; n++) {
             if (n > 0) {
                 sgf += "\n;";
@@ -488,6 +488,10 @@ var Goban = /** @class */ (function () {
             }
         }
         sgf += "\n)";
+        return sgf;
+    };
+    Goban.prototype.initDownloadLink = function () {
+        var sgf = this.toSgf();
         /* Doesn't work in Anki (only in the browser):
         try {
             var element = document.createElement('a');

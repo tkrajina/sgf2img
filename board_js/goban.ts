@@ -471,8 +471,8 @@ class Goban {
 		this.drawBoard(this.positions.length - 1);
 	}
 
-	public initDownloadLink() {
-		let sgf = "(";
+	private toSgf() {
+		let sgf = "(;";
 		for (let n = 0; n < this.positions.length; n++) {
 			if (n > 0) {
 				sgf += "\n;"
@@ -516,6 +516,11 @@ class Goban {
 			}
 		}
 		sgf += "\n)";
+		return sgf;
+	}
+
+	public initDownloadLink() {
+		const sgf = this.toSgf();
 		/* Doesn't work in Anki (only in the browser):
 		try {
 			var element = document.createElement('a');
