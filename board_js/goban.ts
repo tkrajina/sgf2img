@@ -379,8 +379,13 @@ class Goban {
 			stoneDiv.style.width = `${this.stoneSide}px`;
 			stoneDiv.style.height = `${this.stoneSide}px`;
 			stoneDiv.onclick = () => {
-				alert("Location " + coordsToSgfCoords(row, column));
-
+				const coord = coordsToSgfCoords(row, column);
+				let commentsEl = document.getElementById("goban_comment");
+				if (commentsEl) {
+					commentsEl.innerHTML = "Position: " + coord;
+				} else {
+					alert("Location " + coord);
+				}
 			}
 			this.gobanDiv.appendChild(stoneDiv);
 		}
@@ -481,7 +486,13 @@ class Goban {
 			for (const tag in pos.tags) {
 				for (let val of pos.tags[tag]) {
 					if (tag[0].match(/[a-z]/i)) {
-						sgf += "\n" + `${tag}[${val}]`;
+						let values: string[] = [];
+						if (TAG_LABELS[tag]) {
+							values = val.split(",");
+						}
+						for (const val of values) {
+							sgf += "\n" + `${tag}[${val}]`;
+						}
 					}
 				}
 			}
@@ -490,27 +501,17 @@ class Goban {
 				console.log("line:", line);
 				for (let columnNo = 0; columnNo < line.length; columnNo++) {
 					const loc = line[columnNo];
-					switch (loc) {
-						case "w":
-							if (n == 0) {
-								sgf += "\n" + `AW[${this.toSgfCoordinates(lineNo, columnNo)}]`
-							}
-							break;
-						case "W":
-							if (!pos.tags["W"]) {
-								sgf += "\n" + `W[${this.toSgfCoordinates(lineNo, columnNo)}]`
-							}
-							break;
-						case "b":
-							if (n == 0) {
-								sgf += "\n" + `AB[${this.toSgfCoordinates(lineNo, columnNo)}]`
-							}
-							break;
-						case "B":
-							if (!pos.tags["B"]) {
-								sgf += "\n" + `B[${this.toSgfCoordinates(lineNo, columnNo)}]`
-							}
-							break;
+					if (n == 0) {
+						if (loc.toLowerCase() == "w" || loc.toLowerCase() == "b") {
+							sgf += "\n" + `A${loc.toUpperCase()}[${this.toSgfCoordinates(lineNo, columnNo)}]`
+						}
+						if (loc == "W" || loc == "B") {
+							sgf += "\n" + `LB[${this.toSgfCoordinates(lineNo, columnNo)}:+]`
+						}
+					} else if (loc == "W" || loc == "B") {
+						if (!pos.tags[loc]) {
+							sgf += "\n" + `${loc}[${this.toSgfCoordinates(lineNo, columnNo)}]`
+						}
 					}
 				}
 			}
@@ -521,6 +522,7 @@ class Goban {
 
 	public initDownloadLink() {
 		const sgf = this.toSgf();
+		//document.getElementsByTagName("html")[0].innerHTML = sgf;
 		/* Doesn't work in Anki (only in the browser):
 		try {
 			var element = document.createElement('a');

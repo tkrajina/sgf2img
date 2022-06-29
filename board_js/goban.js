@@ -360,7 +360,14 @@ var Goban = /** @class */ (function () {
             stoneDiv.style.width = this.stoneSide + "px";
             stoneDiv.style.height = this.stoneSide + "px";
             stoneDiv.onclick = function () {
-                alert("Location " + coordsToSgfCoords(row, column));
+                var coord = coordsToSgfCoords(row, column);
+                var commentsEl = document.getElementById("goban_comment");
+                if (commentsEl) {
+                    commentsEl.innerHTML = "Position: " + coord;
+                }
+                else {
+                    alert("Location " + coord);
+                }
             };
             this.gobanDiv.appendChild(stoneDiv);
         }
@@ -453,7 +460,14 @@ var Goban = /** @class */ (function () {
                 for (var _i = 0, _a = pos.tags[tag]; _i < _a.length; _i++) {
                     var val = _a[_i];
                     if (tag[0].match(/[a-z]/i)) {
-                        sgf += "\n" + (tag + "[" + val + "]");
+                        var values = [];
+                        if (TAG_LABELS[tag]) {
+                            values = val.split(",");
+                        }
+                        for (var _b = 0, values_1 = values; _b < values_1.length; _b++) {
+                            var val_1 = values_1[_b];
+                            sgf += "\n" + (tag + "[" + val_1 + "]");
+                        }
                     }
                 }
             }
@@ -462,27 +476,18 @@ var Goban = /** @class */ (function () {
                 console.log("line:", line);
                 for (var columnNo = 0; columnNo < line.length; columnNo++) {
                     var loc = line[columnNo];
-                    switch (loc) {
-                        case "w":
-                            if (n == 0) {
-                                sgf += "\n" + ("AW[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
-                            }
-                            break;
-                        case "W":
-                            if (!pos.tags["W"]) {
-                                sgf += "\n" + ("W[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
-                            }
-                            break;
-                        case "b":
-                            if (n == 0) {
-                                sgf += "\n" + ("AB[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
-                            }
-                            break;
-                        case "B":
-                            if (!pos.tags["B"]) {
-                                sgf += "\n" + ("B[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
-                            }
-                            break;
+                    if (n == 0) {
+                        if (loc.toLowerCase() == "w" || loc.toLowerCase() == "b") {
+                            sgf += "\n" + ("A" + loc.toUpperCase() + "[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                        }
+                        if (loc == "W" || loc == "B") {
+                            sgf += "\n" + ("LB[" + this.toSgfCoordinates(lineNo, columnNo) + ":+]");
+                        }
+                    }
+                    else if (loc == "W" || loc == "B") {
+                        if (!pos.tags[loc]) {
+                            sgf += "\n" + (loc + "[" + this.toSgfCoordinates(lineNo, columnNo) + "]");
+                        }
                     }
                 }
             }
@@ -492,6 +497,7 @@ var Goban = /** @class */ (function () {
     };
     Goban.prototype.initDownloadLink = function () {
         var sgf = this.toSgf();
+        //document.getElementsByTagName("html")[0].innerHTML = sgf;
         /* Doesn't work in Anki (only in the browser):
         try {
             var element = document.createElement('a');
