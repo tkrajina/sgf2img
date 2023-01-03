@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -214,99 +213,4 @@ func SaveToGifFile(filePath string, m image.Image) error {
 		return err
 	}
 	return nil
-}
-
-func nodeAnnotationsToAnki(node sgf.Node) string {
-	var res []string
-	tags := []string{
-		/*SGFTagBlackMove, SGFTagWhiteMove, <-- not needed because they are represented with WB (uppercase) */
-		sgfutils.SGFTagComment,
-		sgfutils.SGFTagTriangle,
-		sgfutils.SGFTagSquare,
-		sgfutils.SGFTagCircle,
-		sgfutils.SGFTagX,
-		sgfutils.SGFTagLabel,
-	}
-	valuesPerTag := map[string][]string{}
-	for _, tag := range tags {
-		for _, val := range node.AllValues(tag) {
-			valuesPerTag[tag] = append(valuesPerTag[tag], val)
-		}
-	}
-
-	for _, tag := range tags {
-		val := strings.Join(valuesPerTag[tag], ",")
-		var cleaned []string
-	lines_loop:
-		for _, line := range strings.Split(val, "\n") {
-			for _, d := range directives {
-				if strings.HasPrefix(strings.TrimSpace(line), d) {
-					continue lines_loop
-				}
-			}
-			cleaned = append(cleaned, line)
-		}
-		val = strings.TrimSpace(strings.Join(cleaned, "\\n"))
-		if val != "" {
-			res = append(res, fmt.Sprintf("%s:%s", tag, val))
-		}
-	}
-	return strings.Join(res, "\n") + "\n"
-}
-
-func boardAnnotationsToAnki(node sgf.Node) string {
-	var res []string
-	tags := []string{
-		sgfutils.SGFTagWhiteName,
-		sgfutils.SGFTagBlackName,
-		sgfutils.SGFTagApplication,
-		sgfutils.SGFTagDate,
-		sgfutils.SGFTagBlackRank,
-		sgfutils.SGFTagWhiteRank,
-		sgfutils.SGFTagResult,
-	}
-	for _, tag := range tags {
-		for _, val := range node.AllValues(tag) {
-			if val != "" {
-				res = append(res, fmt.Sprintf("%s:%s", tag, val))
-			}
-		}
-	}
-	return strings.Join(res, "\n") + "\n"
-}
-
-func boardToAnki(node sgf.Node) string {
-	// ·●○
-	var res []string
-	board := node.Board()
-	for i := 0; i < board.Size; i++ {
-		res = append(res, "")
-		for j := 0; j < board.Size; j++ {
-			color := board.Get(sgf.Point(j, i))
-			latestMove := false
-			for _, tag := range []string{sgfutils.SGFTagBlackMove, sgfutils.SGFTagWhiteMove} {
-				if value, found := node.GetValue(tag); found && value != "" {
-					x, y, _ := sgf.ParsePoint(value, node.Board().Size)
-					if x == j && y == i {
-						//fmt.Println(x, y, i, y)
-						latestMove = true
-					}
-				}
-			}
-
-			pt := sgfutils.Empty
-			switch color {
-			case sgf.WHITE:
-				pt = sgfutils.WhiteCircle
-			case sgf.BLACK:
-				pt = sgfutils.BlackCircle
-			}
-
-			if latestMove {
-				pt = strings.ToUpper(pt)
-			}
-			res[len(res)-1] += pt
-		}
-	}
-	return strings.Join(res, "\n")
 }

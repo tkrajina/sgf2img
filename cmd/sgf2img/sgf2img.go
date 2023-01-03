@@ -31,10 +31,8 @@ func panicIfErr(err error) {
 type imageType string
 
 const (
-	png  imageType = "png"
-	svg  imageType = "svg"
-	html imageType = "html"
-	anki imageType = "anki"
+	png imageType = "png"
+	svg imageType = "svg"
 )
 
 type ctx struct {
@@ -58,11 +56,15 @@ func main() {
 	flag.BoolVar(&(opts.mistakes), "mi", false, "Mistakes to images (assumes that if a node comment starts with 'Mistake' the parent has another branch which is the right path)")
 	flag.BoolVar(&(opts.mainLine), "ml", false, "Make one image out of the main branch line")
 	flag.BoolVar(&(opts.verbose), "v", false, "Verbose")
-	flag.StringVar(&typ, "t", string(png), fmt.Sprintf("Image type (%s|%s|%s|%s)", png, svg, html, anki))
+	flag.StringVar(&typ, "t", string(png), fmt.Sprintf("Image type (%s|%s)", png, svg))
 	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
 
-	opts.imageType = imageType(typ)
+	if typ == "" {
+		opts.imageType = png
+	} else {
+		opts.imageType = imageType(typ)
+	}
 
 	if help {
 		flag.Usage()
@@ -191,16 +193,6 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) error {
 			} else {
 				draw2dimg.SaveToPngFile(fn, crop(dest, ci, *node.Board(), *opts))
 			}
-		case anki:
-			txt := boardToAnki(*node) + "\n"
-			txt += boardAnnotationsToAnki(*node.GetRoot())
-			txt += fmt.Sprintf("FN:%s\n", sgfFilename)
-			txt += nodeAnnotationsToAnki(*node)
-			if err := ioutil.WriteFile(fn, []byte(txt), 0700); err != nil {
-				return err
-			}
-		case html:
-			// TODO
 		default:
 			return fmt.Errorf("invalid type: %s", opts.imageType)
 		}
@@ -287,33 +279,6 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 			if err := animatePng(images, fn); err != nil {
 				return err
 			}
-		case anki:
-			txt := ""
-			for n, node := range animatedNodes {
-				if n > 0 {
-					txt += "--" + "\n"
-				}
-				if n == 0 {
-					txt += boardToAnki(node) + "\n"
-					txt += boardAnnotationsToAnki(*node.GetRoot())
-					txt += fmt.Sprintf("FN:%s\n", sgfFilename)
-					txt += nodeAnnotationsToAnki(node)
-					txt += autocropAnki(animatedNodes)
-				} else {
-					prev := strings.Split(boardToAnki(animatedNodes[n-1]), "\n")
-					this := strings.Split(boardToAnki(node), "\n")
-					for n := 0; n < len(prev); n++ {
-						if strings.ToLower(prev[n]) != strings.ToLower(this[n]) {
-							txt += fmt.Sprintf("%d:%s\n", n, strings.TrimSpace(this[n]))
-						}
-					}
-					txt += nodeAnnotationsToAnki(node)
-				}
-			}
-			ioutil.WriteFile(fn, []byte(txt), 0700)
-			opts.csvRows = append(opts.csvRows, []string{"<pre>" + txt + "</pre>"})
-		case html:
-			// TODO
 		}
 		fmt.Printf("Saved %d board positions on move %d (%s) to: %s\n", len(animatedNodes), depth, ca.name, fn)
 	}

@@ -12,16 +12,10 @@ run: clean
 	mkdir -p examples/svg
 	mv -v sgf/*svg examples/svg
 
-	go run cmd/sgf2img/*go -t anki sgf/*sgf
-	mkdir -p examples/anki
-	mv -v sgf/*anki examples/anki
-	-mv -v sgf/*csv examples/anki
-
 .PHONY: clean
 clean:
 	-rm sgf/*png
 	-rm sgf/*svg
-	-rm sgf/*anki
 	-rm sgf/*csv
 	-rm -Rf examples/*
 
@@ -36,11 +30,3 @@ install:
 	go build -o $(DIR)/sgffindpos ./cmd/sgffindpos/*go
 	go build -o $(DIR)/sgflongestmainline ./cmd/sgflongestmainline/*go
 	go build -o $(DIR)/sgf2ankicsv ./cmd/sgf2ankicsv/*go
-
-.PHONY: build-js
-build-js:
-	tsc board_js/goban.ts
-
-.PHONY: open-js
-open-js: build-js
-	open board_js/goban.html
