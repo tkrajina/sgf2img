@@ -35,6 +35,7 @@ install:
 	go build -o $(DIR)/sgfinfo ./cmd/sgfinfo/*go
 	go build -o $(DIR)/sgffindpos ./cmd/sgffindpos/*go
 	go build -o $(DIR)/sgflongestmainline ./cmd/sgflongestmainline/*go
+	go build -o $(DIR)/sgf2ankicsv ./cmd/sgf2ankicsv/*go
 
 .PHONY: build-js
 build-js:
