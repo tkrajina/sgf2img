@@ -11,20 +11,11 @@ import (
 )
 
 var (
-	directiveImg     = []string{"!i", "!img"}
-	directiveStart   = []string{"!s", "!start"}
-	directiveEnd     = []string{"!e", "!end"}
-	directiveComment = []string{"!c"}
+	directiveImg     = "!img"
+	directiveStart   = "!start"
+	directiveEnd     = "!end"
+	directiveComment = "!comment"
 )
-
-var directives = []string{}
-
-func init() {
-	directives = append(directives, directiveImg...)
-	directives = append(directives, directiveStart...)
-	directives = append(directives, directiveEnd...)
-	directives = append(directives, directiveComment...)
-}
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
 
@@ -36,23 +27,34 @@ type commentAnimate struct {
 	name string
 }
 
-type commentMedatada struct {
+type nodeImgMetdata struct {
 	comment string
 	images  []commentImage
 	start   []commentImage
 	animate []commentAnimate
 }
 
-func parseNodeComment(node *sgf.Node) (cm commentMedatada) {
+func parseNodeImgMetadata(node *sgf.Node) (cm nodeImgMetdata) {
 	comment, found := node.GetValue(sgfutils.SGFTagComment)
 	cm.comment = comment
 	if found {
-		cm = parseComment(comment, node.Board().Size)
+		parseComment(comment, node.Board().Size, &cm)
 	}
+
+	for _, val := range node.AllValues(strings.Trim(directiveEnd, "!")) {
+		cm.animate = append(cm.animate, commentAnimate{name: val})
+	}
+	for _, val := range node.AllValues(strings.Trim(directiveStart, "!")) {
+		cm.start = append(cm.start, commentImage{name: val})
+	}
+	for _, val := range node.AllValues(strings.Trim(directiveImg, "!")) {
+		cm.images = append(cm.images, commentImage{name: val})
+	}
+
 	return
 }
 
-func parseComment(comment string, boardSize int) (cm commentMedatada) {
+func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 	lines := strings.Split(comment, "\n")
 	for _, line := range lines {
 		line = strings.ToLower(line)
@@ -60,8 +62,8 @@ func parseComment(comment string, boardSize int) (cm commentMedatada) {
 		if len(parts) == 0 {
 			continue
 		}
-		isImg := isOneOf(parts[0], directiveImg)
-		isStart := isOneOf(parts[0], directiveStart)
+		isImg := parts[0] == directiveImg
+		isStart := parts[0] == directiveStart
 		if isImg || isStart {
 			ci := commentImage{}
 			if len(parts) > 1 {
@@ -99,7 +101,7 @@ func parseComment(comment string, boardSize int) (cm commentMedatada) {
 				cm.start = append(cm.start, ci)
 			}
 		}
-		if isOneOf(parts[0], directiveEnd) {
+		if parts[0] == directiveEnd {
 			ca := commentAnimate{}
 			if len(parts) > 1 {
 				ca.name = parts[1]

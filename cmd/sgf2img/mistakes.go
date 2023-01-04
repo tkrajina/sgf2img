@@ -40,7 +40,7 @@ func markMistakes(mistakeNode *sgf.Node) {
 	}
 	id := fmt.Sprint(time.Now().UnixNano())
 	comment, _ := parentNode.GetValue(sgfutils.SGFTagComment)
-	parentNode.SetValue(sgfutils.SGFTagComment, directiveImg[0]+" "+id+"\n"+comment)
+	parentNode.SetValue(sgfutils.SGFTagComment, directiveImg+" "+id+"\n"+comment)
 	fmt.Println("Setting start ", id)
 
 	branch := parentNode.Children()[1]
@@ -49,6 +49,6 @@ func markMistakes(mistakeNode *sgf.Node) {
 	}
 
 	comment, _ = branch.GetValue(sgfutils.SGFTagComment)
-	branch.SetValue(sgfutils.SGFTagComment, directiveEnd[0]+" "+id+"\n"+comment)
+	branch.SetValue(sgfutils.SGFTagComment, directiveEnd+" "+id+"\n"+comment)
 	fmt.Println("Setting end ", id)
 }

@@ -110,14 +110,14 @@ func processSgfFile(sgfFn string, opts *ctx) error {
 	if opts.mainLine {
 		tmpNode := node
 		commentStart, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
-		tmpNode.SetValue(sgfutils.SGFTagComment, commentStart+"\n"+directiveStart[0]+" main_line")
+		tmpNode.SetValue(sgfutils.SGFTagComment, commentStart+"\n"+directiveStart+" main_line")
 
-		for true {
+		for {
 			if len(tmpNode.Children()) > 0 {
 				tmpNode = tmpNode.Children()[0]
 			} else {
 				commentEnd, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
-				tmpNode.SetValue(sgfutils.SGFTagComment, commentEnd+"\n"+directiveEnd[0]+" main_line")
+				tmpNode.SetValue(sgfutils.SGFTagComment, commentEnd+"\n"+directiveEnd+" main_line")
 				break
 			}
 		}
@@ -163,7 +163,7 @@ func exportedImgFilename(sgfFn, name, suffix, extension string) string {
 }
 
 func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) error {
-	comment := parseNodeComment(node)
+	comment := parseNodeImgMetadata(node)
 	for _, ci := range comment.images {
 		if opts.verbose {
 			fmt.Println(sgfutils.BoardToString(*node.Board()))
@@ -232,7 +232,7 @@ func grayscale(dest image.Image, opts ctx) image.Image {
 	return grayScale
 }
 
-func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename string, depth int) error {
+func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *ctx, sgfFilename string, depth int) error {
 	for _, ca := range cm.animate {
 		tmpNode := node
 		var parentImage commentImage
@@ -241,7 +241,7 @@ func saveAnimations(cm commentMedatada, node *sgf.Node, opts *ctx, sgfFilename s
 
 	loop:
 		for true {
-			parentCm := parseNodeComment(tmpNode)
+			parentCm := parseNodeImgMetadata(tmpNode)
 			for _, parentCi := range parentCm.start {
 				if parentCi.name == ca.name {
 					parentImage = parentCi
