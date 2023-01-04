@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -43,7 +42,6 @@ type ctx struct {
 	mistakes   bool
 	mainLine   bool
 	verbose    bool
-	csvRows    [][]string
 }
 
 func main() {
@@ -81,15 +79,6 @@ func main() {
 			panic(err.Error())
 		}
 	}
-
-	if len(opts.csvRows) > 0 {
-		cssFn := exportedImgFilename("anki_import", "", "", "csv")
-		f, err := os.Create(cssFn)
-		panicIfErr(err)
-		csvwriter := csv.NewWriter(f)
-		panicIfErr(csvwriter.WriteAll(opts.csvRows))
-		fmt.Printf("Saved %d rows to %s\n", len(opts.csvRows), cssFn)
-	}
 }
 
 func processSgfFile(sgfFn string, opts *ctx) error {
@@ -109,15 +98,13 @@ func processSgfFile(sgfFn string, opts *ctx) error {
 	}
 	if opts.mainLine {
 		tmpNode := node
-		commentStart, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
-		tmpNode.SetValue(sgfutils.SGFTagComment, commentStart+"\n"+directiveStart+" main_line")
+		tmpNode.SetValue(directiveStart, "main_line")
 
 		for {
 			if len(tmpNode.Children()) > 0 {
 				tmpNode = tmpNode.Children()[0]
 			} else {
-				commentEnd, _ := tmpNode.GetValue(sgfutils.SGFTagComment)
-				tmpNode.SetValue(sgfutils.SGFTagComment, commentEnd+"\n"+directiveEnd+" main_line")
+				tmpNode.SetValue(directiveEnd, "main_line")
 				break
 			}
 		}
