@@ -46,7 +46,7 @@ sgf_loop:
 			findSub(node)
 		} else {
 			node.SetValue("CROP", "auto")
-			node.SetValue("FN", fn)
+			node.SetValue(sgfutils.SGFTagSource, fn)
 
 			tmpFile, err := os.CreateTemp(os.TempDir(), "sgf2anki_*.sgf")
 			if err != nil {
