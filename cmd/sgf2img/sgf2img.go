@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"flag"
 	"fmt"
 	"image"
 	"image/color"
-	"io/ioutil"
+	imagepng "image/png"
 	"math"
 	"os"
 	"path"
@@ -75,26 +76,33 @@ func main() {
 	}
 
 	for _, sgfFn := range flag.Args() {
-		if err := processSgfFile(sgfFn, &opts); err != nil {
+		files, err := processSgfFile(sgfFn, &opts)
+		if err != nil {
 			panic(err.Error())
+		}
+		for _, file := range files {
+			fmt.Printf("Save %d bytes in %s\n", len(file.Contents), file.Name)
+			if err := os.WriteFile(file.Name, file.Contents, 0700); err != nil {
+				panic(err.Error())
+			}
 		}
 	}
 }
 
-func processSgfFile(sgfFn string, opts *ctx) error {
+type GobanImageFile struct {
+	Name     string
+	Contents []byte
+}
+
+func processSgfFile(sgfFn string, opts *ctx) ([]GobanImageFile, error) {
 	fmt.Println("Loading", sgfFn)
 	node, err := sgf.Load(sgfFn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if opts.mistakes {
 		walkNodesAndMarkMistakes(node, opts, 0)
-		fn := "tmp.sgf" //path.Join(os.TempDir(), "tmp.sgf")
-		if err := node.Save(fn); err != nil {
-			return err
-		}
-		fmt.Println("Saved marked file to", fn)
 	}
 	if opts.mainLine {
 		tmpNode := node
@@ -110,11 +118,7 @@ func processSgfFile(sgfFn string, opts *ctx) error {
 		}
 	}
 
-	if err := walkNodes(sgfFn, node, opts, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return walkNodes(sgfFn, node, opts, 0)
 }
 
 func animatePng(images []image.Image, fn string) error {
@@ -149,7 +153,9 @@ func exportedImgFilename(sgfFn, name, suffix, extension string) string {
 	return path.Join(dir, strings.Trim("sgf2img_"+base+"_"+name+"_"+suffix, "_")+"."+extension)
 }
 
-func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) error {
+func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) ([]GobanImageFile, error) {
+	var files []GobanImageFile
+
 	comment := parseNodeImgMetadata(node)
 	for _, ci := range comment.images {
 		if opts.verbose {
@@ -165,39 +171,48 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *ctx, depth int) error {
 			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, *opts)
 			byts, err := xml.Marshal(svg)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			ioutil.WriteFile(fn, byts, 0700)
+			files = append(files, GobanImageFile{Name: fn, Contents: byts})
 		case png:
 			dest := image.NewRGBA(image.Rect(0, 0, int(opts.imageSize), int(opts.imageSize)))
 			gc := draw2dimg.NewGraphicContext(dest)
 			boardToImage(gc, *node, *opts)
 			// img = crop(img, ci, *node.Board(), opts) TODO
 
+			var i image.Image
 			if opts.grayscale {
 				gs := grayscale(dest, *opts)
-				draw2dimg.SaveToPngFile(fn, crop(gs, ci, *node.Board(), *opts))
+				i = crop(gs, ci, *node.Board(), *opts)
 			} else {
-				draw2dimg.SaveToPngFile(fn, crop(dest, ci, *node.Board(), *opts))
+				i = crop(dest, ci, *node.Board(), *opts)
 			}
+			b := bytes.NewBuffer([]byte{})
+			if err := imagepng.Encode(b, i); err != nil {
+				return nil, err
+			}
+
+			files = append(files, GobanImageFile{Name: fn, Contents: b.Bytes()})
 		default:
-			return fmt.Errorf("invalid type: %s", opts.imageType)
+			return nil, fmt.Errorf("invalid type: %s", opts.imageType)
 		}
 		fmt.Printf("Saved 1 board position on move %d (%s) to: %s\n", depth, ci.name, fn)
 	}
 
 	if err := saveAnimations(comment, node, opts, sgfFilename, depth); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Continue recursion
 	for _, child := range node.Children() {
-		if err := walkNodes(sgfFilename, child, opts, depth+1); err != nil {
-			return err
+		newFiles, err := walkNodes(sgfFilename, child, opts, depth+1)
+		if err != nil {
+			return nil, err
 		}
+		files = append(files, newFiles...)
 	}
 
-	return nil
+	return files, nil
 }
 
 func grayscale(dest image.Image, opts ctx) image.Image {
