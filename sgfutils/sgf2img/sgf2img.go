@@ -116,6 +116,8 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 		switch opts.ImageType {
 		case SVG:
 			svg := draw2dsvg.NewSvg()
+			svg.Width = fmt.Sprint(opts.ImageSize)
+			svg.Height = fmt.Sprint(opts.ImageSize)
 			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, *opts)
 			byts, err := xml.Marshal(svg)
 			if err != nil {
