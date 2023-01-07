@@ -8,7 +8,6 @@ import (
 	"image/color"
 	imagepng "image/png"
 	"math"
-	"os"
 	"path"
 	"strings"
 
@@ -28,6 +27,7 @@ const (
 
 type Options struct {
 	ImageSize  int64
+	Images     []int
 	ImageType  ImageType
 	AnkiImport string
 	Grayscale  bool
@@ -51,6 +51,17 @@ func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, e
 	if opts.Mistakes {
 		walkNodesAndMarkMistakes(node, opts, 0)
 	}
+	for _, imgNo := range opts.Images {
+		tmpNode := node
+		n := 0
+		for tmpNode.MainChild() != nil {
+			if n == imgNo {
+				tmpNode.SetValue(directiveImg, fmt.Sprintf("_img_%d", imgNo))
+			}
+			tmpNode = tmpNode.MainChild()
+			n++
+		}
+	}
 	if opts.MainLine {
 		tmpNode := node
 		tmpNode.SetValue(directiveStart, "main_line")
@@ -69,17 +80,13 @@ func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, e
 	return node, files, err
 }
 
-func animatePng(images []image.Image, fn string) error {
+func animatePng(images []image.Image, fn string) ([]byte, error) {
 	a := apng.APNG{
 		Frames:    make([]apng.Frame, len(images)),
 		LoopCount: 1,
 	}
 	// Open our file for writing
-	out, err := os.Create(fn)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
+	out := bytes.NewBuffer([]byte{})
 	// Assign each decoded PNG's Image to the appropriate Frame Image
 	for n := range images {
 		a.Frames[n].Image = images[n]
@@ -92,7 +99,10 @@ func animatePng(images []image.Image, fn string) error {
 		}
 	}
 	// Write APNG to our output file
-	return apng.Encode(out, a)
+	if err := apng.Encode(out, a); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
 
 func exportedImgFilename(sgfFn, name, suffix, extension string) string {
@@ -128,12 +138,10 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 			dest := image.NewRGBA(image.Rect(0, 0, int(opts.ImageSize), int(opts.ImageSize)))
 			gc := draw2dimg.NewGraphicContext(dest)
 			boardToImage(gc, *node, *opts)
-			// img = crop(img, ci, *node.Board(), opts) TODO
 
 			var i image.Image
 			if opts.Grayscale {
-				gs := grayscale(dest, *opts)
-				i = crop(gs, ci, *node.Board(), *opts)
+				i = crop(grayscale(dest, *opts), ci, *node.Board(), *opts)
 			} else {
 				i = crop(dest, ci, *node.Board(), *opts)
 			}
@@ -149,9 +157,11 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 		fmt.Printf("Saved 1 board position on move %d (%s) to: %s\n", depth, ci.name, fn)
 	}
 
-	if err := saveAnimations(comment, node, opts, sgfFilename, depth); err != nil {
+	animations, err := saveAnimations(comment, node, opts, sgfFilename, depth)
+	if err != nil {
 		return nil, err
 	}
+	files = append(files, animations...)
 
 	// Continue recursion
 	for _, child := range node.Children() {
@@ -184,7 +194,8 @@ func grayscale(dest image.Image, opts Options) image.Image {
 	return grayScale
 }
 
-func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilename string, depth int) error {
+func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilename string, depth int) ([]GobanImageFile, error) {
+	var res []GobanImageFile
 	for _, ca := range cm.animate {
 		tmpNode := node
 		var parentImage commentImage
@@ -205,7 +216,7 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 				if opts.Verbose {
 					fmt.Println(sgfutils.BoardToString(*node.Board()))
 				}
-				return fmt.Errorf("can't find node with img name '%s' for animation (loc %d)", ca.name, depth+1)
+				return nil, fmt.Errorf("can't find node with img name '%s' for animation (loc %d)", ca.name, depth+1)
 			} else {
 				animatedNodes = append([]sgf.Node{*tmpNode}, animatedNodes...)
 			}
@@ -228,14 +239,16 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 				}
 				images[n] = crop(images[n], parentImage, *node.Board(), *opts)
 			}
-			if err := animatePng(images, fn); err != nil {
-				return err
+			byts, err := animatePng(images, fn)
+			if err != nil {
+				return nil, err
 			}
+			res = append(res, GobanImageFile{Name: fn, Contents: byts})
 		}
 		fmt.Printf("Saved %d board positions on move %d (%s) to: %s\n", len(animatedNodes), depth, ca.name, fn)
 	}
 
-	return nil
+	return res, nil
 }
 
 func autocropAnki(nodes []sgf.Node) string {
