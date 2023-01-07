@@ -41,11 +41,11 @@ type GobanImageFile struct {
 	Contents []byte
 }
 
-func ProcessSgfFile(sgfFn string, opts *Options) ([]GobanImageFile, error) {
+func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, error) {
 	fmt.Println("Loading", sgfFn)
 	node, err := sgf.Load(sgfFn)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if opts.Mistakes {
@@ -65,7 +65,8 @@ func ProcessSgfFile(sgfFn string, opts *Options) ([]GobanImageFile, error) {
 		}
 	}
 
-	return walkNodes(sgfFn, node, opts, 0)
+	files, err := walkNodes(sgfFn, node, opts, 0)
+	return node, files, err
 }
 
 func animatePng(images []image.Image, fn string) error {
