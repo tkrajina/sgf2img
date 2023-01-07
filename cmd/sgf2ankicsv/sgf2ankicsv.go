@@ -122,4 +122,6 @@ func getSub(n *sgf.Node, startFrom int) error {
 	if len(branch) >= startFrom {
 		return fmt.Errorf("invalid start %s", startFrom)
 	}
+
+	return nil
 }
