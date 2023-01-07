@@ -1,4 +1,4 @@
-package main
+package sgf2img
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/tkrajina/sgf2img/sgfutils"
 )
 
-func walkNodesAndMarkMistakes(node *sgf.Node, opts *ctx, depth int) error {
+func walkNodesAndMarkMistakes(node *sgf.Node, opts *Options, depth int) error {
 	comment, _ := node.GetValue(sgfutils.SGFTagComment)
 	c := strings.TrimSpace(strings.ToLower(comment))
 	if strings.HasPrefix(c, "mistake") && !strings.HasPrefix(c, "mistakes") {

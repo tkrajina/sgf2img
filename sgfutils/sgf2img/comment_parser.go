@@ -1,4 +1,4 @@
-package main
+package sgf2img
 
 import (
 	"fmt"
