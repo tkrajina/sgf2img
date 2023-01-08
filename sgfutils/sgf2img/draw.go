@@ -14,31 +14,31 @@ import (
 	"github.com/tkrajina/sgf2img/sgfutils"
 )
 
-func boardToImage(gc draw2d.GraphicContext, node sgf.Node, opts Options) {
+func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 	gc.SetFillColor(color.RGBA{239, 193, 113, 0xff})
 	gc.BeginPath()  // Initialize a new path
 	gc.MoveTo(0, 0) // Move to a position to start the new path
-	gc.LineTo(0, float64(opts.ImageSize))
-	gc.LineTo(float64(opts.ImageSize), float64(opts.ImageSize))
-	gc.LineTo(float64(opts.ImageSize), 0)
+	gc.LineTo(0, float64(imgSize))
+	gc.LineTo(float64(imgSize), float64(imgSize))
+	gc.LineTo(float64(imgSize), 0)
 	gc.Close()
 	gc.FillStroke()
 	for i := 0; i < node.Board().Size; i++ {
 		gc.SetStrokeColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
 		gc.SetLineWidth(0.20)
 
-		gc.MoveTo(boardCoordinateToImageCoordinate(i, 0, int(opts.ImageSize), *node.Board()))
-		gc.LineTo(boardCoordinateToImageCoordinate(i, node.Board().Size-1, int(opts.ImageSize), *node.Board()))
+		gc.MoveTo(boardCoordinateToImageCoordinate(i, 0, int(imgSize), *node.Board()))
+		gc.LineTo(boardCoordinateToImageCoordinate(i, node.Board().Size-1, int(imgSize), *node.Board()))
 		gc.Close()
 		gc.FillStroke()
 
-		gc.MoveTo(boardCoordinateToImageCoordinate(0, i, int(opts.ImageSize), *node.Board()))
-		gc.LineTo(boardCoordinateToImageCoordinate(node.Board().Size-1, i, int(opts.ImageSize), *node.Board()))
+		gc.MoveTo(boardCoordinateToImageCoordinate(0, i, int(imgSize), *node.Board()))
+		gc.LineTo(boardCoordinateToImageCoordinate(node.Board().Size-1, i, int(imgSize), *node.Board()))
 		gc.Close()
 		gc.FillStroke()
 	}
 
-	band := float64(opts.ImageSize) / float64(node.Board().Size)
+	band := float64(imgSize) / float64(node.Board().Size)
 
 	var hoshi [][2]int
 	switch node.Board().Size {
@@ -54,7 +54,7 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, opts Options) {
 		}
 	}
 	for _, h := range hoshi {
-		x, y := boardCoordinateToImageCoordinate(h[0], h[1], int(opts.ImageSize), *node.Board())
+		x, y := boardCoordinateToImageCoordinate(h[0], h[1], int(imgSize), *node.Board())
 		gc.SetFillColor(image.Black)
 		gc.ArcTo(x, y, band/10, band/10, 0, 2*math.Pi)
 		gc.Close()
@@ -62,7 +62,7 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, opts Options) {
 	}
 
 	// Stones
-	drawStones(gc, node, int(opts.ImageSize))
+	drawStones(gc, node, int(imgSize))
 
 	var lastMoves []string
 	if whiteMove, ok := node.GetValue(sgfutils.SGFTagWhiteMove); ok {
@@ -72,7 +72,7 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, opts Options) {
 		lastMoves = append(lastMoves, blackMove)
 	}
 	for _, circle := range lastMoves {
-		x, y := sgfCoordinatesToImageCoordinates(circle, int(opts.ImageSize), *node.Board())
+		x, y := sgfCoordinatesToImageCoordinates(circle, int(imgSize), *node.Board())
 		if node.Board().Get(circle) == sgf.BLACK {
 			gc.SetFillColor(color.White)
 			gc.SetStrokeColor(color.White)
@@ -87,12 +87,12 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, opts Options) {
 	}
 
 	// triangles:
-	drawPolyline(node.AllValues("TR"), gc, &node, int(opts.ImageSize), 3, 0)
+	drawPolyline(node.AllValues("TR"), gc, &node, int(imgSize), 3, 0)
 	// squares:
-	drawPolyline(node.AllValues("SQ"), gc, &node, int(opts.ImageSize), 4, math.Pi/4)
+	drawPolyline(node.AllValues("SQ"), gc, &node, int(imgSize), 4, math.Pi/4)
 
-	drawLabels(gc, node, int(opts.ImageSize))
-	drawCircles(gc, node, int(opts.ImageSize))
+	drawLabels(gc, node, int(imgSize))
+	drawCircles(gc, node, int(imgSize))
 }
 
 func drawStones(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {

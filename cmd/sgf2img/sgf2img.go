@@ -24,6 +24,7 @@ func main() {
 	flag.BoolVar(&(opts.Mistakes), "mi", false, "Mistakes to images (assumes that if a node comment starts with 'Mistake' the parent has another branch which is the right path)")
 	flag.BoolVar(&(opts.MainLine), "ml", false, "Make one image out of the main branch line")
 	flag.BoolVar(&(opts.Verbose), "v", false, "Verbose")
+	flag.BoolVar(&(opts.AutoCrop), "c", false, "Autocrop")
 	flag.StringVar(&typ, "t", string(sgf2img.PNG), fmt.Sprintf("Image type (%s|%s)", sgf2img.PNG, sgf2img.SVG))
 	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()

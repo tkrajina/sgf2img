@@ -34,6 +34,7 @@ type Options struct {
 	Mistakes   bool
 	MainLine   bool
 	Verbose    bool
+	AutoCrop   bool
 }
 
 type GobanImageFile struct {
@@ -105,6 +106,101 @@ func animatePng(images []image.Image, fn string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+func emptyLinesAround(node *sgf.Node) (up, down, left, right int) {
+	fmt.Println(sgfutils.BoardToString(*node.Board()))
+	if len(node.AllValues(sgfutils.SGFTagBlackMove)) == 0 && len(node.AllValues(sgfutils.SGFTagWhiteMove)) == 0 {
+		node = node.MainChild()
+	}
+	if node == nil {
+		return
+	}
+	var (
+		board  = node.Board()
+		size   = board.Size
+		rowMax = 0
+		rowMin = size
+		colMax = 0
+		colMin = size
+	)
+	stones := 0
+	for row := 0; row < size; row++ {
+		for col := 0; col < size; col++ {
+			color := board.Get(sgf.Point(col, row))
+			if color == sgf.BLACK || color == sgf.WHITE {
+				stones++
+				if row > rowMax {
+					rowMax = row
+				}
+				if col > colMax {
+					colMax = col
+				}
+				if row < rowMin {
+					rowMin = row
+				}
+				if col < colMin {
+					colMin = col
+				}
+			}
+		}
+	}
+	if stones == 0 {
+		return 0, 0, 0, 0
+	}
+	return rowMin, size - rowMax - 1, colMin, size - colMax - 1
+}
+
+func calculateCrop(nodes []*sgf.Node, opts Options) (crop Crop, originalImgSize int) {
+	originalImgSize = int(opts.ImageSize)
+	if !opts.AutoCrop {
+		return
+	}
+	boardSize := -1
+	var up, down, left, right int
+	for n, node := range nodes {
+		if n == 0 {
+			up, down, left, right = emptyLinesAround(node)
+			boardSize = node.Board().Size
+		} else {
+			u, d, l, r := emptyLinesAround(node)
+			if u < up {
+				up = u
+			}
+			if d < down {
+				down = d
+			}
+			if l < left {
+				left = l
+			}
+			if r < right {
+				right = r
+			}
+		}
+		if opts.Verbose {
+			fmt.Printf("node #%d -- empty lines: %d %d %d %d\n", n, up, down, left, right)
+		}
+	}
+	if opts.Verbose {
+		fmt.Printf("crop: %d %d %d %d\n", up, down, left, right)
+	}
+	crop.Up = up
+	crop.Down = down
+	crop.Left = left
+	crop.Right = right
+	crop.Bigger(2)
+
+	resize := float64(boardSize) / math.Max(
+		float64(boardSize-crop.Left-crop.Right),
+		float64(boardSize-crop.Up-crop.Down),
+	)
+	originalImgSize = int(float64(opts.ImageSize) * resize)
+	if originalImgSize <= 0 {
+		originalImgSize = int(opts.ImageSize)
+	}
+	fmt.Println("resize:", resize, "to", originalImgSize)
+
+	return
+}
+
 func exportedImgFilename(sgfFn, name, suffix, extension string) string {
 	dir, file := path.Split(sgfFn)
 	base := strings.Replace(file, path.Ext(file), "", 1)
@@ -113,6 +209,7 @@ func exportedImgFilename(sgfFn, name, suffix, extension string) string {
 
 func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]GobanImageFile, error) {
 	var files []GobanImageFile
+	boardSize := node.Board().Size
 
 	comment := parseNodeImgMetadata(node)
 	for _, ci := range comment.images {
@@ -120,30 +217,46 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 			fmt.Println(sgfutils.BoardToString(*node.Board()))
 		}
 
-		////////////////////////////////////////////////////////////////////////////////////////////////////
-		////////////////////////////////////////////////////////////////////////////////////////////////////
+		cr, originalImgSize := calculateCrop([]*sgf.Node{node}, *opts)
+		if opts.Verbose {
+			fmt.Printf("crop to %v with original size %d\n", cr, originalImgSize)
+		}
+
 		fn := exportedImgFilename(sgfFilename, ci.name, "", string(opts.ImageType))
 		switch opts.ImageType {
 		case SVG:
 			svg := draw2dsvg.NewSvg()
-			svg.Width = fmt.Sprint(opts.ImageSize)
-			svg.Height = fmt.Sprint(opts.ImageSize)
-			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, *opts)
+			svg.Width = fmt.Sprint(originalImgSize)
+			svg.Height = fmt.Sprint(originalImgSize)
+			if cr.isCrop() {
+				band := float64(originalImgSize) / float64(boardSize)
+				left := float64(cr.Left) * band
+				up := float64(cr.Up) * band
+				width := float64(boardSize-cr.Left-cr.Right)*band + 1
+				height := float64(boardSize-cr.Up-cr.Down)*band + 1
+				svg.ViewBox = fmt.Sprintf("%d %d %d %d", int(left), int(up), int(width), int(height)) // int(left), int(down), 100, 100) //int(right-left), int(down-up))
+				if opts.Verbose {
+					fmt.Printf("SVG crop %#v\n", cr)
+					fmt.Printf("SVG viewbox %#v\n", svg.ViewBox)
+				}
+			}
+
+			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, originalImgSize)
 			byts, err := xml.Marshal(svg)
 			if err != nil {
 				return nil, err
 			}
 			files = append(files, GobanImageFile{Name: fn, Contents: byts})
 		case PNG:
-			dest := image.NewRGBA(image.Rect(0, 0, int(opts.ImageSize), int(opts.ImageSize)))
+			dest := image.NewRGBA(image.Rect(0, 0, int(originalImgSize), int(originalImgSize)))
 			gc := draw2dimg.NewGraphicContext(dest)
-			boardToImage(gc, *node, *opts)
+			boardToImage(gc, *node, originalImgSize)
 
 			var i image.Image
 			if opts.Grayscale {
-				i = crop(grayscale(dest, *opts), ci.crop, *node.Board(), *opts)
+				i = cropImage(grayscale(dest, originalImgSize), cr, *node.Board(), originalImgSize)
 			} else {
-				i = crop(dest, ci.crop, *node.Board(), *opts)
+				i = cropImage(dest, cr, *node.Board(), originalImgSize)
 			}
 			b := bytes.NewBuffer([]byte{})
 			if err := imagepng.Encode(b, i); err != nil {
@@ -175,8 +288,8 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 	return files, nil
 }
 
-func grayscale(dest image.Image, opts Options) image.Image {
-	w, h := int(opts.ImageSize), int(opts.ImageSize)
+func grayscale(dest image.Image, originalImgSize int) image.Image {
+	w, h := originalImgSize, originalImgSize
 	grayScale := image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
 	for x := 0; x < w; x++ {
 		for y := 0; y < h; y++ {
@@ -200,7 +313,7 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 		tmpNode := node
 		var parentImage imgMetadata
 
-		animatedNodes := []sgf.Node{*tmpNode}
+		animatedNodes := []*sgf.Node{tmpNode}
 
 	loop:
 		for {
@@ -218,26 +331,29 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 				}
 				return nil, fmt.Errorf("can't find node with img name '%s' for animation (loc %d)", ca.name, depth+1)
 			} else {
-				animatedNodes = append([]sgf.Node{*tmpNode}, animatedNodes...)
+				animatedNodes = append([]*sgf.Node{tmpNode}, animatedNodes...)
 			}
 		}
+
+		cr, originalSize := calculateCrop(animatedNodes, *opts)
+		_ = parentImage
 
 		fn := exportedImgFilename(sgfFilename, ca.name, "animated", string(opts.ImageType))
 		switch opts.ImageType {
 		case PNG:
 			var images []image.Image
 			for _, n := range animatedNodes {
-				img := image.NewRGBA(image.Rect(0, 0, int(opts.ImageSize), int(opts.ImageSize)))
+				img := image.NewRGBA(image.Rect(0, 0, originalSize, originalSize))
 				gc := draw2dimg.NewGraphicContext(img)
-				boardToImage(gc, n, *opts)
+				boardToImage(gc, *n, originalSize)
 				images = append(images, img)
 			}
 			fmt.Printf("Found %d images to animate\n", len(images))
 			for n := range images {
 				if opts.Grayscale {
-					images[n] = grayscale(images[n], *opts)
+					images[n] = grayscale(images[n], originalSize)
 				}
-				images[n] = crop(images[n], parentImage.crop, *node.Board(), *opts)
+				images[n] = cropImage(images[n], cr, *node.Board(), originalSize)
 			}
 			byts, err := animatePng(images, fn)
 			if err != nil {
@@ -348,23 +464,26 @@ left_loop:
 	return res
 }
 
-func crop(img image.Image, c Crop, board sgf.Board, opts Options) image.Image {
-	band := float64(opts.ImageSize) / float64(board.Size)
+func cropImage(img image.Image, c Crop, board sgf.Board, originalImgSize int) image.Image {
+	if !c.isCrop() {
+		return img
+	}
+	band := float64(originalImgSize) / float64(board.Size)
 	left := float64(c.Left) * band
 	right := float64(c.Right) * band
 	up := float64(c.Up) * band
 	down := float64(c.Down) * band
-	if left+right > float64(opts.ImageSize) {
-		left = float64(opts.ImageSize) / 2.
-		right = float64(opts.ImageSize) / 2.
+	if left+right > float64(originalImgSize) {
+		left = float64(originalImgSize) / 2.
+		right = float64(originalImgSize) / 2.
 	}
-	if up+down > float64(opts.ImageSize) {
-		up = float64(opts.ImageSize) / 2.
-		down = float64(opts.ImageSize) / 2.
+	if up+down > float64(originalImgSize) {
+		up = float64(originalImgSize) / 2.
+		down = float64(originalImgSize) / 2.
 	}
 	return img.(interface {
 		SubImage(r image.Rectangle) image.Image
-	}).SubImage(image.Rect(int(left), int(up), int(opts.ImageSize)-int(right), int(opts.ImageSize)-int(down)))
+	}).SubImage(image.Rect(int(left), int(up), int(originalImgSize)-int(right), int(originalImgSize)-int(down)))
 }
 
 func sgfCoordinatesToImageCoordinates(coords string, imagesize int, board sgf.Board) (float64, float64) {

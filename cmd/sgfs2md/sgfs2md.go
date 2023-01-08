@@ -20,7 +20,7 @@ func main() {
 
 	b := bytes.NewBufferString("")
 
-	opts := sgf2img.Options{ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{1}}
+	opts := sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{1}}
 	for _, fn := range flag.Args() {
 		node, images, err := sgf2img.ProcessSgfFile(fn, &opts)
 		_ = node

@@ -1,14 +1,14 @@
 .PHONY: run
 run: clean
-	go run cmd/sgf2img/*go -g sgf/*sgf
+	go run cmd/sgf2img/*go -g -c sgf/*sgf
 	mkdir -p examples/bw
 	mv -v sgf/*png examples/bw
 
-	go run cmd/sgf2img/*go sgf/*sgf
+	go run cmd/sgf2img/*go -c sgf/*sgf
 	mkdir -p examples/color
 	mv -v sgf/*png examples/color
 
-	go run cmd/sgf2img/*go -t svg sgf/*sgf
+	go run cmd/sgf2img/*go -c -t svg sgf/*sgf
 	mkdir -p examples/svg
 	mv -v sgf/*svg examples/svg
 

@@ -19,7 +19,26 @@ var (
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
 
 type Crop struct {
-	Left, Right, Up, Down int
+	Up, Down, Left, Right int
+}
+
+func (c *Crop) Bigger(s int) {
+	c.Up -= s
+	c.Down -= s
+	c.Left -= s
+	c.Right -= s
+	if c.Up < 0 {
+		c.Up = 0
+	}
+	if c.Down < 0 {
+		c.Down = 0
+	}
+	if c.Left < 0 {
+		c.Left = 0
+	}
+	if c.Right < 0 {
+		c.Right = 0
+	}
 }
 
 func (c Crop) isCrop() bool {
