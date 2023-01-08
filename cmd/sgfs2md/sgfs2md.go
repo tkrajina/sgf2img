@@ -75,9 +75,10 @@ func file(fn string, b *bytes.Buffer) error {
 		return fmt.Errorf("no images found for %s", fn)
 	}
 
-	_, _ = b.WriteString(fmt.Sprintf("<div style='width:%dpx; height: %dpx'>", opts.ImageSize, opts.ImageSize))
+	_, _ = b.WriteString(fmt.Sprintf(`<div style="width: %dpx; float: left; padding: 1em">`, opts.ImageSize))
 	_, _ = b.Write(images[0].Contents)
 	_, _ = b.WriteString("</div>\n\n")
+	_, _ = b.WriteString(`<div style="float: left; padding: 1em">`)
 	_, _ = b.WriteString(fmt.Sprintf("**%s**:", path.Base(fn)))
 	comments := node.AllValues(sgfutils.SGFTagComment)
 	if len(comments) > 0 {
@@ -97,6 +98,8 @@ func file(fn string, b *bytes.Buffer) error {
 	_, _ = b.WriteString("[solution](" + solution + ") &nbsp;\n\n")
 
 	_, _ = b.WriteString("\n\n")
+	_, _ = b.WriteString("</div>\n\n")
+	_, _ = b.WriteString(`<div style="clear: both"></div>\n\n`)
 
 	return nil
 }
