@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
+	"sort"
+	"strings"
 
+	"github.com/tkrajina/sgf2img/sgfutils"
 	"github.com/tkrajina/sgf2img/sgfutils/sgf2img"
 )
 
@@ -15,23 +20,100 @@ func panicIfErr(err error) {
 	}
 }
 
+var recursive bool
+var opts = sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
+
 func main() {
+	flag.BoolVar(&recursive, "r", false, "Recursive from current from directories")
 	flag.Parse()
 
 	b := bytes.NewBufferString("")
 
-	opts := sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{1}}
+	var lastDir string
 	for _, fn := range flag.Args() {
-		node, images, err := sgf2img.ProcessSgfFile(fn, &opts)
-		_ = node
-		panicIfErr(err)
-
-		_, _ = b.WriteString(fmt.Sprintf("# %s\n\n", fn))
-		if len(images) > 0 {
-			_, _ = b.Write(images[0].Contents)
-			_, _ = b.WriteString("\n\n")
+		if recursive {
+			walk(fn, func(filename string) error {
+				dir, fn := path.Split(filename)
+				_ = fn
+				fmt.Println(dir, lastDir)
+				if dir != lastDir {
+					parts := strings.Split(dir, string(os.PathSeparator))
+					var title []string
+					for _, part := range parts {
+						part = strings.Trim(part, ". \t\r\n")
+						if len(part) > 0 {
+							title = append(title, part)
+						}
+					}
+					_, _ = b.WriteString("## " + strings.Join(title, " / ") + "\n\n")
+				}
+				lastDir = dir
+				if strings.HasSuffix(strings.ToLower(filename), ".sgf") {
+					panicIfErr(file(filename, b))
+				}
+				return nil
+			})
+		} else {
+			panicIfErr(file(fn, b))
 		}
 	}
 
 	os.WriteFile("sgfs.md", b.Bytes(), 0700)
+}
+
+func file(fn string, b *bytes.Buffer) error {
+	node, images, err := sgf2img.ProcessSgfFile(fn, &opts)
+	if err != nil {
+		return err
+	}
+	_ = node
+
+	if len(images) == 0 {
+		return fmt.Errorf("no images found for %s", fn)
+	}
+
+	_, _ = b.WriteString(fmt.Sprintf("<div style='width:%dpx'>", opts.ImageSize))
+	_, _ = b.Write(images[0].Contents)
+	_, _ = b.WriteString("</div>\n\n")
+	_, _ = b.WriteString(fmt.Sprintf("**%s**:", path.Base(fn)))
+	comments := node.AllValues(sgfutils.SGFTagComment)
+	if len(comments) > 0 {
+		_, _ = b.WriteString(comments[0])
+	}
+	_, _ = b.WriteString("\n\n")
+
+	return nil
+}
+
+func walk(dir string, onFile func(fn string) error) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	var (
+		filenames   []string
+		directories []string
+	)
+	for _, fn := range files {
+		if fn.IsDir() {
+			directories = append(directories, fn.Name())
+		} else {
+			filenames = append(filenames, fn.Name())
+		}
+	}
+
+	sort.Strings(directories)
+	sort.Strings(filenames)
+
+	for _, subdir := range directories {
+		walk(path.Join(dir, subdir), onFile)
+	}
+
+	for _, fn := range filenames {
+		if err := onFile(path.Join(dir, fn)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
