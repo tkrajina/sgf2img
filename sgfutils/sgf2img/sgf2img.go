@@ -350,10 +350,10 @@ left_loop:
 
 func crop(img image.Image, cm imgMetadata, board sgf.Board, opts Options) image.Image {
 	band := float64(opts.ImageSize) / float64(board.Size)
-	left := float64(cm.left) * band
-	right := float64(cm.right) * band
-	up := float64(cm.up) * band
-	down := float64(cm.down) * band
+	left := float64(cm.crop.left) * band
+	right := float64(cm.crop.right) * band
+	up := float64(cm.crop.up) * band
+	down := float64(cm.crop.down) * band
 	if left+right > float64(opts.ImageSize) {
 		left = float64(opts.ImageSize) / 2.
 		right = float64(opts.ImageSize) / 2.

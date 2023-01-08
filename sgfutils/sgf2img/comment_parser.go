@@ -18,9 +18,17 @@ var (
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
 
-type imgMetadata struct {
-	name                  string
+type cropInfo struct {
 	left, right, up, down int
+}
+
+func (c cropInfo) isCrop() bool {
+	return c.left >= 0 || c.right >= 0 || c.up >= 0 || c.down >= 0
+}
+
+type imgMetadata struct {
+	name string
+	crop cropInfo
 }
 type animationMetadata struct {
 	name string
@@ -80,13 +88,13 @@ func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 						letter := matches[0][2]
 						switch letter {
 						case "u":
-							ci.down = int(n)
+							ci.crop.down = int(n)
 						case "d":
-							ci.up = int(n)
+							ci.crop.up = int(n)
 						case "l":
-							ci.right = int(n)
+							ci.crop.right = int(n)
 						case "r":
-							ci.left = int(n)
+							ci.crop.left = int(n)
 						default:
 							fmt.Println("Uknown:", parts[i])
 						}
