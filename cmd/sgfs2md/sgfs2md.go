@@ -5,11 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/rooklift/sgf"
 	"github.com/tkrajina/sgf2img/sgfutils"
 	"github.com/tkrajina/sgf2img/sgfutils/sgf2img"
 )
@@ -72,7 +75,7 @@ func file(fn string, b *bytes.Buffer) error {
 		return fmt.Errorf("no images found for %s", fn)
 	}
 
-	_, _ = b.WriteString(fmt.Sprintf("<div style='width:%dpx'>", opts.ImageSize))
+	_, _ = b.WriteString(fmt.Sprintf("<div style='width:%dpx; height: %dpx'>", opts.ImageSize, opts.ImageSize))
 	_, _ = b.Write(images[0].Contents)
 	_, _ = b.WriteString("</div>\n\n")
 	_, _ = b.WriteString(fmt.Sprintf("**%s**:", path.Base(fn)))
@@ -80,6 +83,19 @@ func file(fn string, b *bytes.Buffer) error {
 	if len(comments) > 0 {
 		_, _ = b.WriteString(comments[0])
 	}
+	_, _ = b.WriteString("\n\n")
+
+	solution := getURL(node)
+	//_, _ = b.WriteString(nodeToSGF(node) + "\n\n")
+	for _, sub := range node.Children() {
+		sub.Detach()
+	}
+	problem := getURL(node)
+	//_, _ = b.WriteString(nodeToSGF(node) + "\n\n")
+
+	_, _ = b.WriteString("[problem](" + problem + ") &nbsp;")
+	_, _ = b.WriteString("[solution](" + solution + ") &nbsp;\n\n")
+
 	_, _ = b.WriteString("\n\n")
 
 	return nil
@@ -116,4 +132,16 @@ func walk(dir string, onFile func(fn string) error) error {
 	}
 
 	return nil
+}
+
+func getURL(node *sgf.Node) string {
+	fn := os.TempDir() + string(os.PathSeparator) + "tmp_" + fmt.Sprint(time.Now().Nanosecond()) + ".sgf"
+	panicIfErr(node.Save(fn))
+
+	byts, err := os.ReadFile(fn)
+	panicIfErr(err)
+
+	v := url.Values{}
+	v.Set("sgf", string(byts))
+	return "https://tkrajina.github.io/besogo/share.html?" + v.Encode()
 }
