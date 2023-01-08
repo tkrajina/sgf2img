@@ -198,12 +198,12 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 	var res []GobanImageFile
 	for _, ca := range cm.animate {
 		tmpNode := node
-		var parentImage commentImage
+		var parentImage imgMetadata
 
 		animatedNodes := []sgf.Node{*tmpNode}
 
 	loop:
-		for true {
+		for {
 			parentCm := parseNodeImgMetadata(tmpNode)
 			for _, parentCi := range parentCm.start {
 				if parentCi.name == ca.name {
@@ -348,7 +348,7 @@ left_loop:
 	return res
 }
 
-func crop(img image.Image, cm commentImage, board sgf.Board, opts Options) image.Image {
+func crop(img image.Image, cm imgMetadata, board sgf.Board, opts Options) image.Image {
 	band := float64(opts.ImageSize) / float64(board.Size)
 	left := float64(cm.left) * band
 	right := float64(cm.right) * band

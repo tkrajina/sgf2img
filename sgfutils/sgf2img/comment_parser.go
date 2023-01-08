@@ -18,19 +18,19 @@ var (
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
 
-type commentImage struct {
+type imgMetadata struct {
 	name                  string
 	left, right, up, down int
 }
-type commentAnimate struct {
+type animationMetadata struct {
 	name string
 }
 
 type nodeImgMetdata struct {
 	comment string
-	images  []commentImage
-	start   []commentImage
-	animate []commentAnimate
+	images  []imgMetadata
+	start   []imgMetadata
+	animate []animationMetadata
 }
 
 func parseNodeImgMetadata(node *sgf.Node) (cm nodeImgMetdata) {
@@ -41,13 +41,13 @@ func parseNodeImgMetadata(node *sgf.Node) (cm nodeImgMetdata) {
 	}
 
 	for _, val := range node.AllValues(directiveEnd) {
-		cm.animate = append(cm.animate, commentAnimate{name: val})
+		cm.animate = append(cm.animate, animationMetadata{name: val})
 	}
 	for _, val := range node.AllValues(directiveStart) {
-		cm.start = append(cm.start, commentImage{name: val})
+		cm.start = append(cm.start, imgMetadata{name: val})
 	}
 	for _, val := range node.AllValues(directiveImg) {
-		cm.images = append(cm.images, commentImage{name: val})
+		cm.images = append(cm.images, imgMetadata{name: val})
 	}
 
 	return
@@ -64,7 +64,7 @@ func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 		isImg := parts[0] == "!"+directiveImg
 		isStart := parts[0] == "!"+directiveStart
 		if isImg || isStart {
-			ci := commentImage{}
+			ci := imgMetadata{}
 			if len(parts) > 1 {
 				ci.name = parts[1]
 			}
@@ -101,7 +101,7 @@ func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 			}
 		}
 		if parts[0] == "!"+directiveEnd {
-			ca := commentAnimate{}
+			ca := animationMetadata{}
 			if len(parts) > 1 {
 				ca.name = parts[1]
 			}
