@@ -15,6 +15,8 @@ import (
 	"github.com/rooklift/sgf"
 	"github.com/tkrajina/sgf2img/sgfutils"
 	"github.com/tkrajina/sgf2img/sgfutils/sgf2img"
+
+	"github.com/gomarkdown/markdown"
 )
 
 func panicIfErr(err error) {
@@ -24,10 +26,12 @@ func panicIfErr(err error) {
 }
 
 var recursive bool
+var html bool
 var opts = sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
 
 func main() {
 	flag.BoolVar(&recursive, "r", false, "Recursive from current from directories")
+	flag.BoolVar(&html, "h", false, "Convert to html")
 	flag.Parse()
 
 	b := bytes.NewBufferString("")
@@ -48,7 +52,7 @@ func main() {
 							title = append(title, part)
 						}
 					}
-					_, _ = b.WriteString("## " + strings.Join(title, " / ") + "\n\n")
+					_, _ = b.WriteString("## " + strings.ReplaceAll(strings.Join(title, " / "), "_", " ") + "\n\n")
 				}
 				lastDir = dir
 				if strings.HasSuffix(strings.ToLower(filename), ".sgf") {
@@ -61,7 +65,21 @@ func main() {
 		}
 	}
 
-	os.WriteFile("sgfs.md", b.Bytes(), 0700)
+	if html {
+		output := markdown.ToHTML(b.Bytes(), nil, nil)
+		output = append([]byte(`<!DOCTYPE html>
+<html>
+<head>
+    <title>SGFs</title>
+    <meta charset="utf-8">
+</head>
+<body>
+		`), output...)
+		output = append(output, []byte("\n</html>")...)
+		panicIfErr(os.WriteFile("sgfs.html", output, 0700))
+	} else {
+		panicIfErr(os.WriteFile("sgfs.md", b.Bytes(), 0700))
+	}
 }
 
 func file(fn string, b *bytes.Buffer) error {
@@ -75,16 +93,16 @@ func file(fn string, b *bytes.Buffer) error {
 		return fmt.Errorf("no images found for %s", fn)
 	}
 
-	_, _ = b.WriteString(fmt.Sprintf(`<div style="width: %dpx; float: left; padding: 1em">`, opts.ImageSize))
+	_, _ = b.WriteString(fmt.Sprintf(`<div style="width: %dpx;">`, opts.ImageSize))
 	_, _ = b.Write(images[0].Contents)
-	_, _ = b.WriteString("</div>\n\n")
-	_, _ = b.WriteString(`<div style="float: left; padding: 1em">`)
-	_, _ = b.WriteString(fmt.Sprintf("**%s**:", path.Base(fn)))
+	_, _ = b.WriteString("</div>\n")
+
+	_, _ = b.WriteString(fmt.Sprintf("\n\n**%s:** ", strings.Replace(path.Base(fn), ".sgf", "", 1)))
 	comments := node.AllValues(sgfutils.SGFTagComment)
 	if len(comments) > 0 {
 		_, _ = b.WriteString(comments[0])
 	}
-	_, _ = b.WriteString("\n\n")
+	_, _ = b.WriteString("<br/>")
 
 	solution := getURL(node)
 	//_, _ = b.WriteString(nodeToSGF(node) + "\n\n")
@@ -94,12 +112,8 @@ func file(fn string, b *bytes.Buffer) error {
 	problem := getURL(node)
 	//_, _ = b.WriteString(nodeToSGF(node) + "\n\n")
 
-	_, _ = b.WriteString("[problem](" + problem + ") &nbsp;")
-	_, _ = b.WriteString("[solution](" + solution + ") &nbsp;\n\n")
-
-	_, _ = b.WriteString("\n\n")
-	_, _ = b.WriteString("</div>\n\n")
-	_, _ = b.WriteString(`<div style="clear: both"></div>\n\n`)
+	_, _ = b.WriteString("[*problem*](" + problem + ") ")
+	_, _ = b.WriteString("· [*solution*](" + solution + ") \n\n")
 
 	return nil
 }

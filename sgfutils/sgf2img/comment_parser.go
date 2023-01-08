@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	directiveImg   = "img"
-	directiveStart = "start"
-	directiveEnd   = "end"
+	directiveImg   = "IMG"
+	directiveStart = "IMGSTART"
+	directiveEnd   = "IMGEND"
 )
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
