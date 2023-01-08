@@ -141,9 +141,9 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 
 			var i image.Image
 			if opts.Grayscale {
-				i = crop(grayscale(dest, *opts), ci, *node.Board(), *opts)
+				i = crop(grayscale(dest, *opts), ci.crop, *node.Board(), *opts)
 			} else {
-				i = crop(dest, ci, *node.Board(), *opts)
+				i = crop(dest, ci.crop, *node.Board(), *opts)
 			}
 			b := bytes.NewBuffer([]byte{})
 			if err := imagepng.Encode(b, i); err != nil {
@@ -237,7 +237,7 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 				if opts.Grayscale {
 					images[n] = grayscale(images[n], *opts)
 				}
-				images[n] = crop(images[n], parentImage, *node.Board(), *opts)
+				images[n] = crop(images[n], parentImage.crop, *node.Board(), *opts)
 			}
 			byts, err := animatePng(images, fn)
 			if err != nil {
@@ -348,12 +348,12 @@ left_loop:
 	return res
 }
 
-func crop(img image.Image, cm imgMetadata, board sgf.Board, opts Options) image.Image {
+func crop(img image.Image, c Crop, board sgf.Board, opts Options) image.Image {
 	band := float64(opts.ImageSize) / float64(board.Size)
-	left := float64(cm.crop.left) * band
-	right := float64(cm.crop.right) * band
-	up := float64(cm.crop.up) * band
-	down := float64(cm.crop.down) * band
+	left := float64(c.Left) * band
+	right := float64(c.Right) * band
+	up := float64(c.Up) * band
+	down := float64(c.Down) * band
 	if left+right > float64(opts.ImageSize) {
 		left = float64(opts.ImageSize) / 2.
 		right = float64(opts.ImageSize) / 2.
