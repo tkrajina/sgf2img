@@ -26,15 +26,20 @@ func panicIfErr(err error) {
 }
 
 var recursive bool
-var html bool
+var outFile string
+var title string
 var opts = sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
 
 func main() {
 	flag.BoolVar(&recursive, "r", false, "Recursive from current from directories")
-	flag.BoolVar(&html, "h", false, "Convert to html")
+	flag.StringVar(&outFile, "o", "sgfs.md", "Output file name (.md or .html)")
+	flag.StringVar(&title, "t", "SGFs", "Document title")
 	flag.Parse()
 
 	b := bytes.NewBufferString("")
+	if title != "" {
+		b.WriteString(fmt.Sprintf("# %s\n\n", title))
+	}
 
 	var lastDir string
 	for _, fn := range flag.Args() {
@@ -65,20 +70,22 @@ func main() {
 		}
 	}
 
-	if html {
+	if strings.HasSuffix(strings.ToLower(outFile), ".html") {
 		output := markdown.ToHTML(b.Bytes(), nil, nil)
 		output = append([]byte(`<!DOCTYPE html>
 <html>
 <head>
-    <title>SGFs</title>
+    <title>`+title+`</title>
     <meta charset="utf-8">
 </head>
 <body>
 		`), output...)
 		output = append(output, []byte("\n</html>")...)
-		panicIfErr(os.WriteFile("sgfs.html", output, 0700))
+		panicIfErr(os.WriteFile(outFile, output, 0700))
+	} else if strings.HasSuffix(strings.ToLower(outFile), ".md") {
+		panicIfErr(os.WriteFile(outFile, b.Bytes(), 0700))
 	} else {
-		panicIfErr(os.WriteFile("sgfs.md", b.Bytes(), 0700))
+		panic("Invalid file name: " + outFile)
 	}
 }
 
@@ -93,16 +100,16 @@ func file(fn string, b *bytes.Buffer) error {
 		return fmt.Errorf("no images found for %s", fn)
 	}
 
+	_, _ = b.WriteString(fmt.Sprintf("**%s:** ", strings.Replace(path.Base(fn), ".sgf", "", 1)))
+	comments := node.AllValues(sgfutils.SGFTagComment)
+	if len(comments) > 0 {
+		_, _ = b.WriteString(strings.ReplaceAll(comments[0], "\n", " "))
+	}
+	_, _ = b.WriteString("<br/>")
+
 	_, _ = b.WriteString(fmt.Sprintf(`<div style="width: %dpx;">`, opts.ImageSize))
 	_, _ = b.Write(images[0].Contents)
 	_, _ = b.WriteString("</div>\n")
-
-	_, _ = b.WriteString(fmt.Sprintf("\n\n**%s:** ", strings.Replace(path.Base(fn), ".sgf", "", 1)))
-	comments := node.AllValues(sgfutils.SGFTagComment)
-	if len(comments) > 0 {
-		_, _ = b.WriteString(comments[0])
-	}
-	_, _ = b.WriteString("<br/>")
 
 	solution := getURL(node)
 	//_, _ = b.WriteString(nodeToSGF(node) + "\n\n")
@@ -114,6 +121,7 @@ func file(fn string, b *bytes.Buffer) error {
 
 	_, _ = b.WriteString("[*problem*](" + problem + ") ")
 	_, _ = b.WriteString("· [*solution*](" + solution + ") \n\n")
+	_, _ = b.WriteString("----\n\n")
 
 	return nil
 }
