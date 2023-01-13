@@ -4,94 +4,91 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/fs"
+	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rooklift/sgf"
 	"github.com/tkrajina/sgf2img/sgfutils"
 )
 
-type Opts struct {
-	Recursive bool
-	GobanTxt  [][]sgf.Colour
-	filename  string
+func panicIfErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
+type Opts struct {
+	filename string
+}
+
+var recursive bool
+
 func main() {
+	flag.BoolVar(&recursive, "r", false, "Recursive")
 	flag.Parse()
 
-	gobanTxt := inputMultiline("Goban position (empty line to finish input):", func(line string) bool {
+	gobanTxt := inputMultiline("SGF (empty line to finish input):", func(line string) bool {
 		return strings.TrimSpace(line) == ""
 	})
 
-	var opts Opts
+	fn := path.Join(os.TempDir(), fmt.Sprintf("tmp_%d.sgf", time.Now().Unix()))
+	defer os.Remove(fn)
 
-	for _, line := range strings.Split(gobanTxt, "\n") {
-		if strings.TrimSpace(line) == "" {
-			continue
+	panicIfErr(ioutil.WriteFile(fn, []byte(gobanTxt), 0700))
+
+	s, err := sgf.Load(fn)
+	panicIfErr(err)
+
+	lastNode := s
+	for lastNode.Children() != nil {
+		if len(lastNode.Children()) == 0 {
+			break
 		}
-		opts.GobanTxt = append(opts.GobanTxt, []sgf.Colour{})
-		for _, r := range []rune(line) {
-			s := string(r)
-			if strings.TrimSpace(s) == "" {
-				continue
-			}
-			var color sgf.Colour
-			switch strings.ToLower(s) {
-			case sgfutils.WhiteCircle:
-				color = sgf.WHITE
-			case sgfutils.BlackCircle:
-				color = sgf.BLACK
-			case sgfutils.Empty:
-				color = sgf.EMPTY
-			default:
-				panic("Invalid character: " + s + ".")
-			}
-			opts.GobanTxt[len(opts.GobanTxt)-1] = append(opts.GobanTxt[len(opts.GobanTxt)-1], color)
-		}
+		lastNode = lastNode.Children()[0]
 	}
 
 	for _, sgfFn := range flag.Args() {
-		fnOpts := opts
-		fnOpts.filename = sgfFn
-		if err := processSgfFile(sgfFn, fnOpts); err != nil {
-			panic(err.Error())
+		if recursive {
+			filepath.Walk(sgfFn, func(fn string, info fs.FileInfo, err error) error {
+				exp := strings.ToLower(path.Ext(fn))
+				if !info.IsDir() && exp == ".sgf" {
+					if err := processSgfFile(fn, lastNode); err != nil {
+						panic(err.Error())
+					}
+				}
+				return nil
+			})
+		} else {
+			if err := processSgfFile(sgfFn, lastNode); err != nil {
+				panic(err.Error())
+			}
 		}
 	}
 }
 
-func processSgfFile(sgfFn string, opts Opts) error {
+func processSgfFile(sgfFn string, targetNode *sgf.Node) error {
 	//fmt.Println("Loading", sgfFn)
 	node, err := sgf.Load(sgfFn)
 	if err != nil {
 		return err
 	}
 
-	return walkNodesAndMarkMistakes(node, opts, 0)
+	return walkNodes(sgfFn, node, targetNode, 0)
 }
 
-func gobanEquals(board sgf.Board, opts Opts) bool {
-	// for lineNo, line := range opts.GobanTxt {
-	// 	for columnNo := range line {
-	// 		pos := board.Get(sgf.Point(columnNo, lineNo))
-	// 		fmt.Print(pos)
-	// 	}
-	// 	fmt.Println()
-	// }
-	// fmt.Println()
-
-	// for _, line := range opts.GobanTxt {
-	// 	for _, gobanPos := range line {
-	// 		fmt.Print(gobanPos)
-	// 	}
-	// 	fmt.Println()
-	// }
-	// fmt.Println()
-
-	for lineNo, line := range opts.GobanTxt {
-		for columnNo, gobanPos := range line {
-			pos := board.Get(sgf.Point(columnNo, lineNo))
-			if gobanPos != pos {
+func gobanEquals(board sgf.Board, node *sgf.Node) bool {
+	nodeBoard := node.Board()
+	if board.Size != nodeBoard.Size {
+		return false
+	}
+	for lineNo := 0; lineNo < board.Size; lineNo++ {
+		for columnNo := 0; columnNo < board.Size; columnNo++ {
+			if board.Get(sgf.Point(columnNo, lineNo)) != nodeBoard.Get(sgf.Point(columnNo, lineNo)) {
 				return false
 			}
 		}
@@ -99,17 +96,17 @@ func gobanEquals(board sgf.Board, opts Opts) bool {
 	return true
 }
 
-func walkNodesAndMarkMistakes(node *sgf.Node, opts Opts, depth int) error {
-	if gobanEquals(*node.Board(), opts) {
+func walkNodes(filename string, node *sgf.Node, targetNode *sgf.Node, depth int) error {
+	if gobanEquals(*node.Board(), targetNode) {
 		fmt.Println("Found:")
 		fmt.Println(sgfutils.BoardToString(*node.Board()))
-		fmt.Println("File: " + opts.filename)
+		fmt.Println("File: " + filename)
 		fmt.Printf("Move: %d\n", depth)
 		return nil
 	}
 
 	for _, child := range node.Children() {
-		if err := walkNodesAndMarkMistakes(child, opts, depth+1); err != nil {
+		if err := walkNodes(filename, child, targetNode, depth+1); err != nil {
 			return err
 		}
 	}

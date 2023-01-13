@@ -28,13 +28,17 @@ func panicIfErr(err error) {
 var recursive bool
 var outFile string
 var title string
+var imgSize int
 var opts = sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
 
 func main() {
 	flag.BoolVar(&recursive, "r", false, "Recursive from current from directories")
 	flag.StringVar(&outFile, "o", "sgfs.md", "Output file name (.md or .html)")
 	flag.StringVar(&title, "t", "SGFs", "Document title")
+	flag.IntVar(&imgSize, "s", 150, "Image size")
 	flag.Parse()
+
+	opts.ImageSize = int64(imgSize)
 
 	b := bytes.NewBufferString("")
 	if title != "" {
@@ -89,6 +93,26 @@ func main() {
 	}
 }
 
+func firstToPlay(node *sgf.Node) string {
+	tmpNode := node
+	n := 0
+	for {
+		println(n)
+		if coord, found := tmpNode.GetValue(sgfutils.SGFTagWhiteMove); found && coord != "" {
+			return "○"
+		}
+		if coord, found := tmpNode.GetValue(sgfutils.SGFTagBlackMove); found && coord != "" {
+			return "●"
+		}
+		tmpNode = node.MainChild()
+		n++
+		if tmpNode == nil || n > 10 {
+			break
+		}
+	}
+	return ""
+}
+
 func file(fn string, b *bytes.Buffer) error {
 	node, images, err := sgf2img.ProcessSgfFile(fn, &opts)
 	if err != nil {
@@ -100,7 +124,7 @@ func file(fn string, b *bytes.Buffer) error {
 		return fmt.Errorf("no images found for %s", fn)
 	}
 
-	_, _ = b.WriteString(fmt.Sprintf("**%s:** ", strings.Replace(path.Base(fn), ".sgf", "", 1)))
+	_, _ = b.WriteString(fmt.Sprintf("%s **%s:** ", firstToPlay(node), strings.Replace(path.Base(fn), ".sgf", "", 1)))
 	comments := node.AllValues(sgfutils.SGFTagComment)
 	if len(comments) > 0 {
 		_, _ = b.WriteString(strings.ReplaceAll(comments[0], "\n", " "))
