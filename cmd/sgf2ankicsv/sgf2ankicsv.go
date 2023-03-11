@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/rooklift/sgf"
@@ -19,50 +18,59 @@ func panicIfErr(err error) {
 	}
 }
 
-var subproblems bool
+var mainFirst bool
 
 func main() {
-	flag.BoolVar(&subproblems, "subproblems", false, "Extract subproblems")
+	flag.BoolVar(&mainFirst, "m", false, "Main branch first?")
 	flag.Parse()
 	panicIfErr(doStuff())
 }
 
 func doStuff() error {
 	var csvRows [][]string
-sgf_loop:
+
 	for _, fn := range flag.Args() {
-		node, err := sgf.Load(fn)
+		root, err := sgf.Load(fn)
 		if err != nil {
 			fmt.Println("Error reading:", fn, "", err.Error())
 			return err
 		}
 
-		if len(node.Children()) == 0 {
-			fmt.Println("Empty sgf:", fn)
-			continue sgf_loop
+		leafNodes := findLeafNodes(root, 0)
+		if err != nil {
+			return err
 		}
+		fmt.Printf("Found %d variants\n", len(leafNodes))
 
-		if subproblems {
-			findSub(node)
-		} else {
-			node.SetValue("CROP", "auto")
-			node.SetValue(sgfutils.SGFTagSource, fn)
+		for variantNo, leafNode := range leafNodes {
+			comment, _ := leafNode.GetValue(sgfutils.SGFTagComment)
+			if variantNo == 0 || strings.Contains(strings.ToLower(comment), "!anki") {
+				fmt.Printf("variant %d\n", variantNo)
+				root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
+				leafNode.MakeMainLine()
 
-			tmpFile, err := os.CreateTemp(os.TempDir(), "sgf2anki_*.sgf")
-			if err != nil {
-				return err
+				tmpFile, err := os.CreateTemp(os.TempDir(), "sgf2anki_*.sgf")
+				if err != nil {
+					return err
+				}
+				if err := root.Save(tmpFile.Name()); err != nil {
+					return err
+				}
+
+				byts, err := ioutil.ReadFile(tmpFile.Name())
+				if err != nil {
+					return err
+				}
+				_ = os.Remove(tmpFile.Name())
+
+				csvRows = append(csvRows, []string{string(byts)})
 			}
-			if err := node.Save(tmpFile.Name()); err != nil {
-				return err
-			}
+		}
+	}
 
-			byts, err := ioutil.ReadFile(tmpFile.Name())
-			if err != nil {
-				return err
-			}
-			_ = os.Remove(tmpFile.Name())
-
-			csvRows = append(csvRows, []string{string(byts)})
+	if !mainFirst {
+		for n := 0; n < len(csvRows)/2; n++ {
+			csvRows[n], csvRows[len(csvRows)-n-1] = csvRows[len(csvRows)-n-1], csvRows[n]
 		}
 	}
 
@@ -82,27 +90,16 @@ sgf_loop:
 	return nil
 }
 
-func findSub(n *sgf.Node) error {
-	ch := n.Children()
-	if len(ch) == 0 {
-		return nil
-	}
-	for _, child := range ch {
-		comment, found := child.GetValue(sgfutils.SGFTagComment)
-		if found && len(comment) > 0 {
-			for _, line := range strings.Split(comment, "\n") {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "!{") && strings.HasSuffix(line, "}") {
-					startNo, err := strconv.ParseInt(strings.Trim(line, "!{} \r\t\n"), 10, 32)
-					if err != nil {
-						return err
-					}
-					getSub(child, int(startNo))
-				}
-			}
+func findLeafNodes(node *sgf.Node, depth int) (leafNodes []*sgf.Node) {
+	if len(node.Children()) == 0 {
+		fmt.Printf("Leaf node at pos %d\n", depth)
+		leafNodes = append(leafNodes, node)
+	} else {
+		for _, child := range node.Children() {
+			leafNodes = append(leafNodes, findLeafNodes(child, depth+1)...)
 		}
 	}
-	return nil
+	return leafNodes
 }
 
 func getSub(n *sgf.Node, startFrom int) error {
