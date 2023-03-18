@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/rooklift/sgf"
@@ -18,10 +19,14 @@ func panicIfErr(err error) {
 	}
 }
 
-var mainFirst bool
+var (
+	mainFirst     bool
+	leaveTmpFiles bool
+)
 
 func main() {
 	flag.BoolVar(&mainFirst, "m", false, "Main branch first?")
+	flag.BoolVar(&leaveTmpFiles, "l", false, "Leave temp files?")
 	flag.Parse()
 	panicIfErr(doStuff())
 }
@@ -29,7 +34,7 @@ func main() {
 func doStuff() error {
 	var csvRows [][]string
 
-	for _, fn := range flag.Args() {
+	for fileNo, fn := range flag.Args() {
 		root, err := sgf.Load(fn)
 		if err != nil {
 			fmt.Println("Error reading:", fn, "", err.Error())
@@ -44,27 +49,47 @@ func doStuff() error {
 
 		for variantNo, leafNode := range leafNodes {
 			comment, _ := leafNode.GetValue(sgfutils.SGFTagComment)
-			if variantNo == 0 || strings.Contains(strings.ToLower(comment), "!anki") {
+			cleanedComment := []string{}
+			ankiLines := []string{}
+			for _, line := range strings.Split(comment, "\n") {
+				if strings.HasPrefix(strings.ToLower(comment), "!anki") {
+					ankiLines = append(ankiLines, line)
+				} else {
+					cleanedComment = append(cleanedComment, line)
+				}
+			}
+			if variantNo == 0 {
+				ankiLines = append(ankiLines, "!anki")
+			}
+			for ankiLineNo, ankiLine := range ankiLines {
 				fmt.Printf("variant %d\n", variantNo)
 				root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
 				leafNode.MakeMainLine()
+				leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
 
-				tmpFile, err := os.CreateTemp(os.TempDir(), "sgf2anki_*.sgf")
+				tmpFileName := path.Join(os.TempDir(), fmt.Sprintf("sgf2anki_%d_%d_%d.sgf", fileNo, variantNo, ankiLineNo))
 				if err != nil {
 					return err
 				}
-				if err := root.Save(tmpFile.Name()); err != nil {
+				if err := root.Save(tmpFileName); err != nil {
 					return err
 				}
 
-				byts, err := ioutil.ReadFile(tmpFile.Name())
+				byts, err := ioutil.ReadFile(tmpFileName)
 				if err != nil {
 					return err
 				}
-				_ = os.Remove(tmpFile.Name())
+
+				if leaveTmpFiles {
+					fmt.Println("Variant saved to ", tmpFileName)
+				} else {
+					_ = os.Remove(tmpFileName)
+				}
 
 				csvRows = append(csvRows, []string{string(byts)})
 			}
+
+			leafNode.SetValue(sgfutils.SGFTagComment, comment)
 		}
 	}
 
