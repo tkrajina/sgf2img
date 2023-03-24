@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/rooklift/sgf"
@@ -20,15 +21,35 @@ func panicIfErr(err error) {
 }
 
 var (
-	mainFirst     bool
-	leaveTmpFiles bool
+	mainFirst            bool
+	chunks               bool
+	leaveTmpFiles        bool
+	cleanKatrainComments bool
 )
 
 func main() {
 	flag.BoolVar(&mainFirst, "m", false, "Main branch first?")
 	flag.BoolVar(&leaveTmpFiles, "l", false, "Leave temp files?")
+	flag.BoolVar(&chunks, "c", false, "Extract chunks (instead of leaving full sgf)?")
+	flag.BoolVar(&cleanKatrainComments, "ck", false, "Clean KaTrain comments?")
 	flag.Parse()
 	panicIfErr(doStuff())
+}
+
+func parseComment(leafNode *sgf.Node) (string, []string, []string) {
+	comments := leafNode.AllValues(sgfutils.SGFTagComment)
+	cleanedComment := []string{}
+	ankiLines := []string{}
+	for _, comment := range comments {
+		for _, line := range strings.Split(comment, "\n") {
+			if strings.HasPrefix(strings.ToLower(line), "!anki") {
+				ankiLines = append(ankiLines, line)
+			} else {
+				cleanedComment = append(cleanedComment, line)
+			}
+		}
+	}
+	return strings.Join(comments, "\n"), cleanedComment, ankiLines
 }
 
 func doStuff() error {
@@ -41,38 +62,54 @@ func doStuff() error {
 			return err
 		}
 
-		leafNodes := findLeafNodes(root, 0)
+		if cleanKatrainComments {
+			if err := sgfutils.CleanKatrainStuff(root); err != nil {
+				return err
+			}
+		}
+
+		ankiNodes := findAnkiNodes(root, 0)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Found %d variants\n", len(leafNodes))
+		fmt.Printf("Found %d variants\n", len(ankiNodes))
 
-		for variantNo, leafNode := range leafNodes {
-			comment, _ := leafNode.GetValue(sgfutils.SGFTagComment)
-			cleanedComment := []string{}
-			ankiLines := []string{}
-			for _, line := range strings.Split(comment, "\n") {
-				if strings.HasPrefix(strings.ToLower(comment), "!anki") {
-					ankiLines = append(ankiLines, line)
-				} else {
-					cleanedComment = append(cleanedComment, line)
-				}
-			}
-			if variantNo == 0 {
+		for variantNo, leafNode := range ankiNodes {
+			comment, cleanedComment, ankiLines := parseComment(leafNode)
+			if !chunks && variantNo == 0 {
 				ankiLines = append(ankiLines, "!anki")
 			}
 			for ankiLineNo, ankiLine := range ankiLines {
+				fmt.Printf("anki line: %s\n", ankiLine)
 				fmt.Printf("variant %d\n", variantNo)
-				root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
-				leafNode.MakeMainLine()
-				leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
 
 				tmpFileName := path.Join(os.TempDir(), fmt.Sprintf("sgf2anki_%d_%d_%d.sgf", fileNo, variantNo, ankiLineNo))
-				if err != nil {
-					return err
-				}
-				if err := root.Save(tmpFileName); err != nil {
-					return err
+				if chunks {
+					ankiLineParts := append(strings.Fields(ankiLine), "1000000")
+					fmt.Printf("parts %#v\n", ankiLineParts)
+					n, err := strconv.ParseInt(ankiLineParts[1], 10, 32)
+					_ = n
+					if err != nil {
+						return err
+					}
+					fmt.Println("TODO", ankiLine)
+					sub, err := sgfutils.Sub(leafNode, -int(n))
+					if err != nil {
+						return err
+					}
+					if err := sub.Save(tmpFileName); err != nil {
+						return err
+					}
+				} else {
+					root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
+					leafNode.MakeMainLine()
+					leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
+					if err != nil {
+						return err
+					}
+					if err := root.Save(tmpFileName); err != nil {
+						return err
+					}
 				}
 
 				byts, err := ioutil.ReadFile(tmpFileName)
@@ -115,35 +152,17 @@ func doStuff() error {
 	return nil
 }
 
-func findLeafNodes(node *sgf.Node, depth int) (leafNodes []*sgf.Node) {
+func findAnkiNodes(node *sgf.Node, depth int) (ankiNode []*sgf.Node) {
+	_, _, ankiLines := parseComment(node)
 	if len(node.Children()) == 0 {
 		fmt.Printf("Leaf node at pos %d\n", depth)
-		leafNodes = append(leafNodes, node)
-	} else {
-		for _, child := range node.Children() {
-			leafNodes = append(leafNodes, findLeafNodes(child, depth+1)...)
-		}
+		ankiNode = append(ankiNode, node)
+	} else if len(ankiLines) > 0 {
+		fmt.Printf("Anki node at pos %d\n", depth)
+		ankiNode = append(ankiNode, node)
 	}
-	return leafNodes
-}
-
-func getSub(n *sgf.Node, startFrom int) error {
-	branch := []*sgf.Node{n}
-	for n.Parent() != nil {
-		n = n.Parent()
-		branch = append([]*sgf.Node{n}, branch...)
+	for _, child := range node.Children() {
+		ankiNode = append(ankiNode, findAnkiNodes(child, depth+1)...)
 	}
-
-	branch = branch[startFrom:]
-	for n := 0; n < len(branch); n++ {
-		if n == 0 {
-			branch[0] = branch[0].Copy()
-		}
-	}
-
-	if len(branch) >= startFrom {
-		return fmt.Errorf("invalid start %s", startFrom)
-	}
-
-	return nil
+	return
 }
