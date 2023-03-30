@@ -68,6 +68,24 @@ func doStuff() error {
 			}
 		}
 
+		var tags []string
+		parts := strings.Split(path.Clean(fn), string(os.PathSeparator))
+		for n := range parts {
+			if n == 0 {
+				continue
+			}
+			tagFn := strings.Join(parts[:n], string(os.PathSeparator)) + string(os.PathSeparator) + "anki_tag"
+			byts, err := os.ReadFile(tagFn)
+			if err != nil {
+				continue
+			}
+			tag := strings.TrimSpace(string(byts))
+			fmt.Println("found tag", tag)
+			if tag != "" {
+				tags = append(tags, tag)
+			}
+		}
+
 		ankiNodes := findAnkiNodes(root, 0)
 		if err != nil {
 			return err
@@ -75,6 +93,7 @@ func doStuff() error {
 		fmt.Printf("Found %d variants\n", len(ankiNodes))
 
 		for variantNo, leafNode := range ankiNodes {
+			root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
 			comment, cleanedComment, ankiLines := parseComment(leafNode)
 			if !chunks && variantNo == 0 {
 				ankiLines = append(ankiLines, "!anki")
@@ -93,7 +112,7 @@ func doStuff() error {
 						return err
 					}
 					fmt.Println("TODO", ankiLine)
-					sub, err := sgfutils.Sub(leafNode, -int(n))
+					sub, err := sgfutils.Sub(leafNode, -int(n), sgfutils.SubOpts{})
 					if err != nil {
 						return err
 					}
@@ -101,7 +120,6 @@ func doStuff() error {
 						return err
 					}
 				} else {
-					root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
 					leafNode.MakeMainLine()
 					leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
 					if err != nil {
@@ -123,7 +141,7 @@ func doStuff() error {
 					_ = os.Remove(tmpFileName)
 				}
 
-				csvRows = append(csvRows, []string{string(byts)})
+				csvRows = append(csvRows, []string{string(byts), strings.Join(tags, ",")})
 			}
 
 			leafNode.SetValue(sgfutils.SGFTagComment, comment)

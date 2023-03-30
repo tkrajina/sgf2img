@@ -1,17 +1,26 @@
 package sgfutils
 
 import (
-	"fmt"
-
 	"github.com/rooklift/sgf"
 )
 
+type SubOpts struct{}
+
 // If nodesAround < 0 => nodes *before* otherwise nodes *after*
-func Sub(lastNode *sgf.Node, nodesBefore int) (*sgf.Node, error) {
+func Sub(lastNode *sgf.Node, nodesBefore int, opts SubOpts) (*sgf.Node, error) {
 	if nodesBefore < 0 {
 		nodesBefore = -nodesBefore
 	}
 	line := lastNode.GetLine()
+
+	// for n, node := range line {
+	// 	if w, ok := node.GetValue(SGFTagWhiteMove); ok && w != "" {
+	// 		println(n, w)
+	// 	} else if b, ok := node.GetValue(SGFTagLabel); ok && b != "" {
+	// 		println(n, b)
+	// 	}
+	// }
+
 	from := len(line) - nodesBefore - 1
 	if from < 0 {
 		from = 0
@@ -24,6 +33,12 @@ func Sub(lastNode *sgf.Node, nodesBefore int) (*sgf.Node, error) {
 		if n == 0 {
 			CopyKeys(FindMetadataNode(node), tmpNode, SGFTagComment) // To get board size and all other important metadata
 			CopyKeys(node, tmpNode, SGFTagBlackMove, SGFTagWhiteMove)
+
+			if w, ok := node.GetValue(SGFTagWhiteMove); ok && w != "" {
+				tmpNode.SetValue(SGFTagCircle, w)
+			} else if b, ok := node.GetValue(SGFTagBlackMove); ok && b != "" {
+				tmpNode.SetValue(SGFTagCircle, b)
+			}
 			board := node.Board()
 			for row := 0; row < board.Size; row++ {
 				for col := 0; col < board.Size; col++ {
@@ -37,17 +52,14 @@ func Sub(lastNode *sgf.Node, nodesBefore int) (*sgf.Node, error) {
 					}
 				}
 			}
-			fmt.Println(tmpNode.AllKeys())
 		} else {
 			var err error
 			if w, _ := node.GetValue(SGFTagWhiteMove); w != "" {
-				println("w", w)
 				tmpNode, err = tmpNode.PlayColour(w, sgf.WHITE)
 				if err != nil {
 					return nil, err
 				}
 			} else if b, _ := node.GetValue(SGFTagBlackMove); b != "" {
-				println("b", b)
 				tmpNode, err = tmpNode.PlayColour(b, sgf.BLACK)
 				if err != nil {
 					return nil, err
