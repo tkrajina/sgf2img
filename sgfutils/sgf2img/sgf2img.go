@@ -26,15 +26,13 @@ const (
 )
 
 type Options struct {
-	ImageSize  int64
-	Images     []int
-	ImageType  ImageType
-	AnkiImport string
-	Grayscale  bool
-	Mistakes   bool
-	MainLine   bool
-	Verbose    bool
-	AutoCrop   bool
+	ImageSize int64
+	Images    []int
+	ImageType ImageType
+	Grayscale bool
+	MainLine  bool
+	Verbose   bool
+	AutoCrop  bool
 }
 
 type GobanImageFile struct {
@@ -49,18 +47,18 @@ func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, e
 		return nil, nil, err
 	}
 
-	if opts.Mistakes {
-		walkNodesAndMarkMistakes(node, opts, 0)
-	}
 	for _, imgNo := range opts.Images {
+		nodes := []*sgf.Node{}
 		tmpNode := node
-		n := 0
 		for tmpNode.MainChild() != nil {
+			nodes = append(nodes, tmpNode)
+			tmpNode = tmpNode.MainChild()
+		}
+		for n, tmpNode := range nodes {
+			imgNo = (imgNo + len(nodes)) % len(nodes)
 			if n == imgNo {
 				tmpNode.SetValue(directiveImg, fmt.Sprintf("_img_%d", imgNo))
 			}
-			tmpNode = tmpNode.MainChild()
-			n++
 		}
 	}
 	if opts.MainLine {

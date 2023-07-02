@@ -32,3 +32,4 @@ install:
 	go build -o $(DIR)/sgf2ankicsv ./cmd/sgf2ankicsv/*go
 	go build -o $(DIR)/sgfs2md ./cmd/sgfs2md/*go
 	go build -o $(DIR)/sgfcleankatrain ./cmd/sgfcleankatrain/*go
+	go build -o $(DIR)/sgfcleancomments ./cmd/sgfcleancomments/*go

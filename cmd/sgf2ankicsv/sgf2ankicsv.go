@@ -4,11 +4,11 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rooklift/sgf"
 	"github.com/tkrajina/sgf2img/sgfutils"
@@ -55,7 +55,16 @@ func parseComment(leafNode *sgf.Node) (string, []string, []string) {
 func doStuff() error {
 	var csvRows [][]string
 
+	dir := path.Join(os.TempDir(), fmt.Sprintf("sgf_%d", time.Now().Unix()))
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	if leaveTmpFiles {
+		fmt.Println("Saving files to:", dir)
+	}
+
 	for fileNo, fn := range flag.Args() {
+		fmt.Println("Loading", fn)
 		root, err := sgf.Load(fn)
 		if err != nil {
 			fmt.Println("Error reading:", fn, "", err.Error())
@@ -102,7 +111,7 @@ func doStuff() error {
 				fmt.Printf("anki line: %s\n", ankiLine)
 				fmt.Printf("variant %d\n", variantNo)
 
-				tmpFileName := path.Join(os.TempDir(), fmt.Sprintf("sgf2anki_%d_%d_%d.sgf", fileNo, variantNo, ankiLineNo))
+				tmpFileName := path.Join(dir, fmt.Sprintf("sgf2anki_%d_%d_%d.sgf", fileNo, variantNo, ankiLineNo))
 				if chunks {
 					ankiLineParts := append(strings.Fields(ankiLine), "1000000")
 					fmt.Printf("parts %#v\n", ankiLineParts)
@@ -130,7 +139,7 @@ func doStuff() error {
 					}
 				}
 
-				byts, err := ioutil.ReadFile(tmpFileName)
+				byts, err := os.ReadFile(tmpFileName)
 				if err != nil {
 					return err
 				}
@@ -154,12 +163,22 @@ func doStuff() error {
 		}
 	}
 
+	// fix missing quotes (becase the latest anki needs all fields in quotes)
+	// for row := range csvRows {
+	// 	for column := range csvRows[row] {
+	// 		if !strings.Contains(csvRows[row][column], `"`) {
+	// 			csvRows[row][column] = `"` + csvRows[row][column] + `"`
+	// 		}
+	// 	}
+	// }
+
 	fn := "anki.csv"
 	f, err := os.Create(fn)
 	if err != nil {
 		return err
 	}
 	csvwriter := csv.NewWriter(f)
+	csvwriter.Comma = ';'
 	if err := csvwriter.WriteAll(csvRows); err != nil {
 		return err
 	}

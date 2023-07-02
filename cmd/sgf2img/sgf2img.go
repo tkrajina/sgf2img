@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/tkrajina/sgf2img/sgfutils/sgf2img"
 )
@@ -18,16 +20,26 @@ func main() {
 	var opts sgf2img.Options
 	var help bool
 	var typ string
+	var nodeNumbers string
 	flag.Int64Var(&(opts.ImageSize), "s", 400, "Image size (max goban board image size)")
-	flag.StringVar(&(opts.AnkiImport), "a", "", "Create Anki import file")
 	flag.BoolVar(&(opts.Grayscale), "g", false, "Grayscale only for png images")
-	flag.BoolVar(&(opts.Mistakes), "mi", false, "Mistakes to images (assumes that if a node comment starts with 'Mistake' the parent has another branch which is the right path)")
 	flag.BoolVar(&(opts.MainLine), "ml", false, "Make one image out of the main branch line")
 	flag.BoolVar(&(opts.Verbose), "v", false, "Verbose")
 	flag.BoolVar(&(opts.AutoCrop), "c", false, "Autocrop")
+	flag.StringVar(&nodeNumbers, "n", "0", "Node numbers (coma separated, -1 for last node)")
 	flag.StringVar(&typ, "t", string(sgf2img.PNG), fmt.Sprintf("Image type (%s|%s)", sgf2img.PNG, sgf2img.SVG))
 	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
+
+	for _, nStr := range strings.Split(nodeNumbers, ",") {
+		nStr = strings.TrimSpace(nStr)
+		n, err := strconv.ParseInt(nStr, 10, 32)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid node numbers: "+nodeNumbers)
+			os.Exit(1)
+		}
+		opts.Images = append(opts.Images, int(n))
+	}
 
 	if typ == "" {
 		opts.ImageType = sgf2img.PNG
