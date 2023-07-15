@@ -27,7 +27,7 @@ func main() {
 
 func doStuff() error {
 	var opt opt
-	flag.IntVar(&opt.page, "p", 10, "Nomber of moves per page")
+	flag.IntVar(&opt.page, "p", 50, "Nomber of moves per page")
 	flag.Parse()
 	for _, fn := range flag.Args() {
 		node, err := sgf.Load(fn)
@@ -43,10 +43,25 @@ func doStuff() error {
 
 func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 	var imgNotes [][]string
-	gameInfo := sgfutils.ParseGameInfo(node)
+	gi := sgfutils.ParseGameInfo(node)
 	b := bytes.NewBuffer([]byte{})
-	title := gameInfo.BlackName + " vs " + gameInfo.WhiteName + " (" + gameInfo.Result + ")"
+	title := gi.BlackName + " vs " + gi.WhiteName
 	_, _ = b.WriteString("# " + title + "\n\n")
+
+	infoIfNonEmpty("Date:", gi.Date, b)
+	infoIfNonEmpty("Event:", gi.Event, b)
+	infoIfNonEmpty("BlackName:", gi.BlackName, b)
+	infoIfNonEmpty("BlackRank:", gi.BlackRank, b)
+	infoIfNonEmpty("BlackTeam:", gi.BlackTeam, b)
+	infoIfNonEmpty("WhiteName:", gi.WhiteName, b)
+	infoIfNonEmpty("WhiteRank:", gi.WhiteRank, b)
+	infoIfNonEmpty("WhiteTeam:", gi.WhiteTeam, b)
+	infoIfNonEmpty("Result:", gi.Result, b)
+	infoIfNonEmpty("Rules:", gi.Rules, b)
+	infoIfNonEmpty("Komi:", gi.Komi, b)
+	infoIfNonEmpty("Handicap:", gi.Handicap, b)
+
+	_, _ = b.WriteString("\n\n")
 	tmpNode := node
 	n := 0
 	moves := map[string][]int{}
@@ -85,12 +100,23 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 		if err := os.WriteFile(file.Name, file.Contents, 0700 /*  */); err != nil {
 			return err
 		}
+		if len(imgNotes[n]) > 0 {
+			_, _ = b.WriteString("## " + imgNotes[n][0] + "\n\n")
+		}
 		_, _ = b.WriteString(fmt.Sprintf(`<div style="width: %dpx;">`, 1000 /* TODO */))
 		_, _ = b.Write(file.Contents)
 		_, _ = b.WriteString("</div>\n\n")
-		_, _ = b.WriteString(strings.Join(imgNotes[n], "\n"))
+		if len(imgNotes[n]) > 1 {
+			_, _ = b.WriteString(strings.Join(imgNotes[n][1:], "\n"))
+		}
 		_, _ = b.WriteString("\n\n")
+		_, _ = b.WriteString(`
+
+<div style="page-break-after: always;"></div>
+
+`)
 	}
+	infoIfNonEmpty("Result:", gi.Result, b)
 
 	// os.WriteFile("kifu.md", b.Bytes(), 0700)
 
@@ -116,9 +142,24 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 	return nil
 }
 
+func infoIfNonEmpty(desc, value string, res *bytes.Buffer) {
+	if value != "" {
+		_, _ = res.WriteString(fmt.Sprintf(" * %s: **%s**\n", strings.Trim(desc, ":"), strings.TrimSpace(value)))
+	}
+}
+
 func toImage(node *sgf.Node, moves map[string][]int, imgNo int) (notes []string) {
+	min, max := -1, -1
 	vals := []string{}
 	for coord, numbers := range moves {
+		for _, n := range numbers {
+			if min == -1 || n < min {
+				min = n
+			}
+			if max == -1 || n > max {
+				max = n
+			}
+		}
 		if len(numbers) > 0 {
 			vals = append(vals, coord+":"+fmt.Sprint(numbers[0]))
 		}
@@ -129,6 +170,7 @@ func toImage(node *sgf.Node, moves map[string][]int, imgNo int) (notes []string)
 		}
 	}
 	sort.Strings(notes)
+	notes = append([]string{fmt.Sprintf("Moves %d - %d", min, max)}, notes...)
 	node.SetValues(sgfutils.SGFTagLabel, vals)
 	node.SetValue(sgf2img.DirectiveImg, fmt.Sprintf("_img_%d", imgNo))
 	return
