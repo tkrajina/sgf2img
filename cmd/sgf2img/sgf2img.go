@@ -58,7 +58,7 @@ func main() {
 	}
 
 	for _, sgfFn := range flag.Args() {
-		_, files, err := sgf2img.ProcessSgfFile(sgfFn, &opts)
+		_, files, err := sgf2img.ProcessSGFFile(sgfFn, &opts)
 		if err != nil {
 			panic(err.Error())
 		}

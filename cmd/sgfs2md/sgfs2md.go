@@ -115,7 +115,7 @@ func firstToPlay(node *sgf.Node) string {
 }
 
 func file(fn string, b *bytes.Buffer) error {
-	node, images, err := sgf2img.ProcessSgfFile(fn, &opts)
+	node, images, err := sgf2img.ProcessSGFFile(fn, &opts)
 	if err != nil {
 		return err
 	}

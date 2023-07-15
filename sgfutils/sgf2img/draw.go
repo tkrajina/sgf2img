@@ -71,7 +71,23 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 	if blackMove, ok := node.GetValue(sgfutils.SGFTagBlackMove); ok {
 		lastMoves = append(lastMoves, blackMove)
 	}
+
+	var allDecorations []string
+	// triangles:
+	allDecorations = append(allDecorations, drawPolyline(node.AllValues("TR"), gc, &node, int(imgSize), 3, 0)...)
+	// squares:
+	allDecorations = append(allDecorations, drawPolyline(node.AllValues("SQ"), gc, &node, int(imgSize), 4, math.Pi/4)...)
+
+	allDecorations = append(allDecorations, drawLabels(gc, node, int(imgSize))...)
+	allDecorations = append(allDecorations, drawCircles(gc, node, int(imgSize))...)
+
+last_moves_loop:
 	for _, circle := range lastMoves {
+		for _, coord := range allDecorations {
+			if circle == coord { // Do not mark last move if there is a decoration (label, circle, triangle...)
+				continue last_moves_loop
+			}
+		}
 		x, y := sgfCoordinatesToImageCoordinates(circle, int(imgSize), *node.Board())
 		if node.Board().Get(circle) == sgf.BLACK {
 			gc.SetFillColor(color.White)
@@ -85,14 +101,6 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 		gc.Close()
 		gc.FillStroke()
 	}
-
-	// triangles:
-	drawPolyline(node.AllValues("TR"), gc, &node, int(imgSize), 3, 0)
-	// squares:
-	drawPolyline(node.AllValues("SQ"), gc, &node, int(imgSize), 4, math.Pi/4)
-
-	drawLabels(gc, node, int(imgSize))
-	drawCircles(gc, node, int(imgSize))
 }
 
 func drawStones(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
@@ -121,9 +129,10 @@ func drawStones(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 	}
 }
 
-func drawCircles(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
+func drawCircles(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []string) {
 	band := float64(imgSize) / float64(node.Board().Size) * .9
 	for _, circle := range node.AllValues("CR") {
+		coords = append(coords, circle)
 		x, y := sgfCoordinatesToImageCoordinates(circle, imgSize, *node.Board())
 		if node.Board().Get(circle) == sgf.BLACK {
 			gc.SetFillColor(color.RGBA{0x00, 0x00, 0x00, 0x00})
@@ -137,37 +146,48 @@ func drawCircles(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 		gc.Close()
 		gc.FillStroke()
 	}
+	return
 }
 
-func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
+func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []string) {
 	band := float64(imgSize) / float64(node.Board().Size) * .9
 	for _, label := range node.AllValues("LB") {
 		parts := strings.Split(label, ":")
 		if len(parts) != 2 {
 			continue
 		}
+		coords = append(coords, parts[0])
 		x, y := sgfCoordinatesToImageCoordinates(parts[0], imgSize, *node.Board())
 		txt := parts[1]
+
+		// Set the font luximbi.ttf
+		gc.SetFontData(draw2d.FontData{Name: "goregular", Family: draw2d.FontFamilyMono})
+		// Set the fill text color to black
+		fontSize := band * .6
+		if len(txt) > 1 {
+			fontSize /= float64(len(txt)) * 0.75
+		}
+
+		// Text label width:
+		gc.SetFillColor(color.RGBA{0, 0, 0, 0})
+		textWidth := gc.FillStringAt(txt, x-fontSize, float64(y)+float64(fontSize+4))
 
 		if node.Board().Get(parts[0]) == sgf.BLACK {
 			gc.SetFillColor(color.RGBA{0xff, 0xff, 0xff, 0xff})
 		} else {
 			gc.SetFillColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
 		}
-
-		// Set the font luximbi.ttf
-		gc.SetFontData(draw2d.FontData{Name: "goregular", Family: draw2d.FontFamilyMono})
-		// Set the fill text color to black
-		fontSize := band * .6
 		gc.SetFontSize(fontSize)
 		// Display Hello World
-		gc.FillStringAt(txt, x-fontSize/2.5, y+fontSize/2)
+		gc.FillStringAt(txt, x-textWidth/2, y+fontSize/2)
 	}
+	return
 }
 
-func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, imgSize, polylineSide int, initialAngle float64) {
+func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, imgSize, polylineSide int, initialAngle float64) (coords []string) {
 	band := float64(imgSize) / float64(node.Board().Size) * .9
 	for _, triangle := range triangles {
+		coords = append(coords, triangle)
 		if node.Board().Get(triangle) == sgf.BLACK {
 			gc.SetStrokeColor(color.RGBA{0xff, 0xff, 0xff, 0xff})
 		} else {
@@ -192,6 +212,7 @@ func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, 
 			gc.FillStroke()
 		}
 	}
+	return
 }
 
 func SaveToGifFile(filePath string, m image.Image) error {

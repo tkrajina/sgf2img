@@ -40,13 +40,17 @@ type GobanImageFile struct {
 	Contents []byte
 }
 
-func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, error) {
+func ProcessSGFFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, error) {
 	fmt.Println("Loading", sgfFn)
 	node, err := sgf.Load(sgfFn)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	return ProcessSGF(sgfFn, node, opts)
+}
+
+func ProcessSGF(fn string, node *sgf.Node, opts *Options) (*sgf.Node, []GobanImageFile, error) {
 	for _, imgNo := range opts.Images {
 		nodes := []*sgf.Node{}
 		tmpNode := node
@@ -57,25 +61,25 @@ func ProcessSgfFile(sgfFn string, opts *Options) (*sgf.Node, []GobanImageFile, e
 		for n, tmpNode := range nodes {
 			imgNo = (imgNo + len(nodes)) % len(nodes)
 			if n == imgNo {
-				tmpNode.SetValue(directiveImg, fmt.Sprintf("_img_%d", imgNo))
+				tmpNode.SetValue(DirectiveImg, fmt.Sprintf("_img_%d", imgNo))
 			}
 		}
 	}
 	if opts.MainLine {
 		tmpNode := node
-		tmpNode.SetValue(directiveStart, "main_line")
+		tmpNode.SetValue(DirectiveStart, "main_line")
 
 		for {
 			if len(tmpNode.Children()) > 0 {
 				tmpNode = tmpNode.Children()[0]
 			} else {
-				tmpNode.SetValue(directiveEnd, "main_line")
+				tmpNode.SetValue(DirectiveEnd, "main_line")
 				break
 			}
 		}
 	}
 
-	files, err := walkNodes(sgfFn, node, opts, 0)
+	files, err := walkNodes(fn, node, opts, 0)
 	return node, files, err
 }
 
@@ -264,7 +268,7 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 
 			files = append(files, GobanImageFile{Name: fn, Contents: b.Bytes()})
 		default:
-			return nil, fmt.Errorf("invalid type: %s", opts.ImageType)
+			return nil, fmt.Errorf("invalid img type: %s", opts.ImageType)
 		}
 		fmt.Printf("Saved 1 board position on move %d (%s) to: %s\n", depth, ci.name, fn)
 	}

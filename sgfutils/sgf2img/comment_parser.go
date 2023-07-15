@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	directiveImg   = "IMG"
-	directiveStart = "IMGSTART"
-	directiveEnd   = "IMGEND"
+	DirectiveImg   = "IMG"
+	DirectiveStart = "IMGSTART"
+	DirectiveEnd   = "IMGEND"
 )
 
 var r = regexp.MustCompile(`^(\d*)(\w)$`)
@@ -67,13 +67,13 @@ func parseNodeImgMetadata(node *sgf.Node) (cm nodeImgMetdata) {
 		parseComment(comment, node.Board().Size, &cm)
 	}
 
-	for _, val := range node.AllValues(directiveEnd) {
+	for _, val := range node.AllValues(DirectiveEnd) {
 		cm.animate = append(cm.animate, animationMetadata{name: val})
 	}
-	for _, val := range node.AllValues(directiveStart) {
+	for _, val := range node.AllValues(DirectiveStart) {
 		cm.start = append(cm.start, imgMetadata{name: val})
 	}
-	for _, val := range node.AllValues(directiveImg) {
+	for _, val := range node.AllValues(DirectiveImg) {
 		cm.images = append(cm.images, imgMetadata{name: val})
 	}
 
@@ -88,8 +88,8 @@ func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 		if len(parts) == 0 {
 			continue
 		}
-		isImg := parts[0] == "!"+directiveImg
-		isStart := parts[0] == "!"+directiveStart
+		isImg := parts[0] == "!"+DirectiveImg
+		isStart := parts[0] == "!"+DirectiveStart
 		if isImg || isStart {
 			ci := imgMetadata{}
 			if len(parts) > 1 {
@@ -127,7 +127,7 @@ func parseComment(comment string, boardSize int, cm *nodeImgMetdata) {
 				cm.start = append(cm.start, ci)
 			}
 		}
-		if parts[0] == "!"+directiveEnd {
+		if parts[0] == "!"+DirectiveEnd {
 			ca := animationMetadata{}
 			if len(parts) > 1 {
 				ca.name = parts[1]
