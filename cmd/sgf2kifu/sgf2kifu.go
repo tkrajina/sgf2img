@@ -97,9 +97,9 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 		return err
 	}
 	for n, file := range files {
-		if err := os.WriteFile(file.Name, file.Contents, 0700 /*  */); err != nil {
-			return err
-		}
+		// if err := os.WriteFile(file.Name, file.Contents, 0700 /*  */); err != nil {
+		// 	return err
+		// }
 		if len(imgNotes[n]) > 0 {
 			_, _ = b.WriteString("## " + imgNotes[n][0] + "\n\n")
 		}
