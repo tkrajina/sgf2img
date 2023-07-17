@@ -92,7 +92,7 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 
 	fmt.Printf("%#v\n", moves)
 
-	_, files, err := sgf2img.ProcessSGF(fn, node, &sgf2img.Options{ImageType: sgf2img.SVG, ImageSize: 1000})
+	_, files, err := sgf2img.ProcessSGF(fn, node, &sgf2img.Options{ImageType: sgf2img.SVG, ImageSize: 1000, BW: true})
 	if err != nil {
 		return err
 	}

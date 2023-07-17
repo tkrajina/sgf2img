@@ -33,6 +33,7 @@ type Options struct {
 	MainLine  bool
 	Verbose   bool
 	AutoCrop  bool
+	BW        bool
 }
 
 type GobanImageFile struct {
@@ -244,7 +245,7 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 				svg.Height = fmt.Sprint(originalImgSize)
 			}
 
-			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, originalImgSize)
+			boardToImage(draw2dsvg.NewGraphicContext(svg), *node, originalImgSize, BoardImageOpts{BW: opts.BW})
 			byts, err := xml.Marshal(svg)
 			if err != nil {
 				return nil, err
@@ -253,7 +254,7 @@ func walkNodes(sgfFilename string, node *sgf.Node, opts *Options, depth int) ([]
 		case PNG:
 			dest := image.NewRGBA(image.Rect(0, 0, int(originalImgSize), int(originalImgSize)))
 			gc := draw2dimg.NewGraphicContext(dest)
-			boardToImage(gc, *node, originalImgSize)
+			boardToImage(gc, *node, originalImgSize, BoardImageOpts{BW: opts.BW})
 
 			var i image.Image
 			if opts.Grayscale {
@@ -348,7 +349,7 @@ func saveAnimations(cm nodeImgMetdata, node *sgf.Node, opts *Options, sgfFilenam
 			for _, n := range animatedNodes {
 				img := image.NewRGBA(image.Rect(0, 0, originalSize, originalSize))
 				gc := draw2dimg.NewGraphicContext(img)
-				boardToImage(gc, *n, originalSize)
+				boardToImage(gc, *n, originalSize, BoardImageOpts{})
 				images = append(images, img)
 			}
 			fmt.Printf("Found %d images to animate\n", len(images))

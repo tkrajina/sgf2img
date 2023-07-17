@@ -14,8 +14,14 @@ import (
 	"github.com/tkrajina/sgf2img/sgfutils"
 )
 
-func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
-	gc.SetFillColor(color.RGBA{239, 193, 113, 0xff})
+type BoardImageOpts struct {
+	BW bool
+}
+
+func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int, opts BoardImageOpts) {
+	if !opts.BW {
+		gc.SetFillColor(color.RGBA{239, 193, 113, 0xff})
+	}
 	gc.BeginPath()  // Initialize a new path
 	gc.MoveTo(0, 0) // Move to a position to start the new path
 	gc.LineTo(0, float64(imgSize))
