@@ -16,7 +16,8 @@ import (
 )
 
 type opt struct {
-	page int
+	page         int
+	resetCounter bool
 }
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 func doStuff() error {
 	var opt opt
 	flag.IntVar(&opt.page, "p", 50, "Nomber of moves per page")
+	flag.BoolVar(&opt.resetCounter, "rc", false, "Reset move counter on new page")
 	flag.Parse()
 	for _, fn := range flag.Args() {
 		node, err := sgf.Load(fn)
@@ -76,13 +78,13 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 		}
 
 		if n > 0 && n%opt.page == 0 {
-			imgNotes = append(imgNotes, toImage(tmpNode, moves, n))
+			imgNotes = append(imgNotes, toImage(tmpNode, moves, n, opt))
 			moves = make(map[string][]int)
 		}
 
 		if len(tmpNode.Children()) == 0 {
 			if len(moves) > 0 {
-				imgNotes = append(imgNotes, toImage(tmpNode, moves, n))
+				imgNotes = append(imgNotes, toImage(tmpNode, moves, n, opt))
 			}
 			break
 		}
@@ -148,10 +150,10 @@ func infoIfNonEmpty(desc, value string, res *bytes.Buffer) {
 	}
 }
 
-func toImage(node *sgf.Node, moves map[string][]int, imgNo int) (notes []string) {
+func toImage(node *sgf.Node, moves map[string][]int, imgNo int, o opt) (notes []string) {
 	min, max := -1, -1
 	vals := []string{}
-	for coord, numbers := range moves {
+	for _, numbers := range moves {
 		for _, n := range numbers {
 			if min == -1 || n < min {
 				min = n
@@ -160,12 +162,19 @@ func toImage(node *sgf.Node, moves map[string][]int, imgNo int) (notes []string)
 				max = n
 			}
 		}
+	}
+	substract := 0
+	if o.resetCounter {
+		substract = min - 1
+	}
+	for coord, numbers := range moves {
 		if len(numbers) > 0 {
-			vals = append(vals, coord+":"+fmt.Sprint(numbers[0]))
+			number := numbers[0]
+			vals = append(vals, coord+":"+fmt.Sprint(number-substract))
 		}
 		if len(numbers) > 1 {
 			for n := 0; n < len(numbers)-1; n++ {
-				notes = append(notes, fmt.Sprintf("* <!-- %04d (used for sorting) --> (%d) at (%d)", numbers[len(numbers)-1], numbers[len(numbers)-1], numbers[n]))
+				notes = append(notes, fmt.Sprintf("* <!-- %04d (used for sorting) --> (%d) at (%d)", numbers[len(numbers)-1], numbers[len(numbers)-1]-substract, numbers[n]-substract))
 			}
 		}
 	}
