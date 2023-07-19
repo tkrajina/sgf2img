@@ -2,6 +2,7 @@ package sgf2img
 
 import (
 	"bufio"
+	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -171,21 +172,22 @@ func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []
 		// Set the fill text color to black
 		fontSize := band * .6
 		if len(txt) > 1 {
-			fontSize /= float64(len(txt)) * 0.75
+			fontSize /= float64(len(txt)) * 0.65
 		}
 
 		// Text label width:
 		gc.SetFillColor(color.RGBA{0, 0, 0, 0})
-		textWidth := gc.FillStringAt(txt, x-fontSize, float64(y)+float64(fontSize+4))
+		gc.SetFontSize(fontSize)
 
 		if node.Board().Get(parts[0]) == sgf.BLACK {
 			gc.SetFillColor(color.RGBA{0xff, 0xff, 0xff, 0xff})
 		} else {
 			gc.SetFillColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
 		}
-		gc.SetFontSize(fontSize)
 		// Display Hello World
-		gc.FillStringAt(txt, x-textWidth/2, y+fontSize/2)
+		textWidth := gc.FillStringAt(txt, 0, 0)
+		fmt.Printf("text '%s', width %f\n", txt, textWidth)
+		gc.FillStringAt(txt, x-band/2+fontSize/2, y+fontSize/2)
 	}
 	return
 }
