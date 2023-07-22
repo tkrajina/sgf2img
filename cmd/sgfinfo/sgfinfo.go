@@ -9,7 +9,8 @@ import (
 )
 
 var args struct {
-	all bool
+	all      bool
+	comments bool
 }
 
 func panicIfErr(err error) {
@@ -20,6 +21,7 @@ func panicIfErr(err error) {
 
 func main() {
 	flag.BoolVar(&args.all, "all", false, "All informations")
+	flag.BoolVar(&args.comments, "c", false, "Print comments")
 	flag.Parse()
 	panicIfErr(doStuff())
 }
@@ -50,6 +52,27 @@ func doStuff() error {
 		} else {
 			fmt.Printf("%20s %5s vs %20s %5s: %s\n", gi.BlackName, gi.BlackRank, gi.WhiteName, gi.WhiteRank, fn)
 		}
+
+		if args.comments {
+			if err := printComments(node, 1); err != nil {
+				return err
+			}
+		}
 	}
+	return nil
+}
+
+func printComments(node *sgf.Node, depth int) error {
+	comments := node.AllValues(sgfutils.SGFTagComment)
+	for n, comment := range comments {
+		fmt.Printf("move #%d comment #%d: %s\n", depth, n+1, comment)
+	}
+
+	for _, child := range node.Children() {
+		if err := printComments(child, depth+1); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

@@ -16,8 +16,8 @@ import (
 )
 
 type opt struct {
-	page         int
-	resetCounter bool
+	page              int
+	continuousCounter bool
 }
 
 func main() {
@@ -28,8 +28,8 @@ func main() {
 
 func doStuff() error {
 	var opt opt
-	flag.IntVar(&opt.page, "p", 50, "Nomber of moves per page")
-	flag.BoolVar(&opt.resetCounter, "rc", false, "Reset move counter on new page")
+	flag.IntVar(&opt.page, "p", 20, "Nomber of moves per page")
+	flag.BoolVar(&opt.continuousCounter, "c", false, "continuous counter (otherwise it starts from 1 on every page)")
 	flag.Parse()
 	for _, fn := range flag.Args() {
 		node, err := sgf.Load(fn)
@@ -68,13 +68,18 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 	n := 0
 	moves := map[string][]int{}
 	for {
-		println(n)
 		wm, _ := tmpNode.GetValue(sgfutils.SGFTagWhiteMove)
 		bm, _ := tmpNode.GetValue(sgfutils.SGFTagBlackMove)
+		coord := ""
 		if wm != "" {
-			moves[wm] = append(moves[wm], n)
+			coord = wm
 		} else if bm != "" {
-			moves[bm] = append(moves[bm], n)
+			coord = bm
+		}
+		moves[coord] = append(moves[coord], n)
+
+		if len(moves[coord]) > 1 {
+			fmt.Printf("Move #%d %s has more than one moves: %#v\n", n+1, coord, moves[coord])
 		}
 
 		if n > 0 && n%opt.page == 0 {
@@ -91,8 +96,6 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
 		tmpNode = tmpNode.Children()[0]
 		n += 1
 	}
-
-	fmt.Printf("%#v\n", moves)
 
 	_, files, err := sgf2img.ProcessSGF(fn, node, &sgf2img.Options{ImageType: sgf2img.SVG, ImageSize: 1000, BW: true})
 	if err != nil {
@@ -129,6 +132,20 @@ func nodeToKifu(fn string, opt opt, node *sgf.Node) (err error) {
     <title>`+title+`</title>
     <meta charset="utf-8">
 	<meta name="viewport" content="initial-scale=1.0, width=device-width"/>
+	<style>
+	.circle {
+		display: inline-block;
+		width: 2em;
+		height: 2em;
+		font-size: 1em;
+		border-radius: 50%;
+		background-color: #ddd; /* You can change the background color here */
+		border: 1px solid black;
+		text-align: center;
+		line-height: 30px;
+		font-weight: bold;
+	  }
+	</style>
 </head>
 <body>
 		`), output...)
@@ -163,9 +180,12 @@ func toImage(node *sgf.Node, moves map[string][]int, imgNo int, o opt) (notes []
 			}
 		}
 	}
-	substract := 0
-	if o.resetCounter {
-		substract = min - 1
+	if min < 1 {
+		min = 1
+	}
+	substract := min - 1
+	if o.continuousCounter {
+		substract = 0
 	}
 	for coord, numbers := range moves {
 		if len(numbers) > 0 {
@@ -173,8 +193,9 @@ func toImage(node *sgf.Node, moves map[string][]int, imgNo int, o opt) (notes []
 			vals = append(vals, coord+":"+fmt.Sprint(number-substract))
 		}
 		if len(numbers) > 1 {
-			for n := 0; n < len(numbers)-1; n++ {
-				notes = append(notes, fmt.Sprintf("* <!-- %04d (used for sorting) --> (%d) at (%d)", numbers[len(numbers)-1], numbers[len(numbers)-1]-substract, numbers[n]-substract))
+			fmt.Printf("Multiple moves %#v\n", numbers)
+			for n := 1; n < len(numbers); n++ {
+				notes = append(notes, fmt.Sprintf("<!-- %04d (used for sorting) --> <span class=\"circle\">%d</span> AT <span class=\"circle\">%d</span><br/>", numbers[n], numbers[n]-substract, numbers[0]-substract))
 			}
 		}
 	}
