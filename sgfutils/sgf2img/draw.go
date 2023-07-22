@@ -2,7 +2,6 @@ package sgf2img
 
 import (
 	"bufio"
-	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -128,7 +127,7 @@ func drawStones(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 			if fillColor != nil {
 				x, y := boardCoordinateToImageCoordinate(i, j, imgSize, *node.Board())
 				gc.SetFillColor(fillColor)
-				gc.ArcTo(x, y, band/2, band/2, 0, 2*math.Pi)
+				gc.ArcTo(x, y, band/2*1.1, band/2*1.1, 0, 2*math.Pi)
 				gc.Close()
 				gc.FillStroke()
 			}
@@ -185,8 +184,8 @@ func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []
 			gc.SetFillColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
 		}
 		// Display Hello World
-		textWidth := gc.FillStringAt(txt, 0, 0)
-		fmt.Printf("text '%s', width %f\n", txt, textWidth)
+		// textWidth := gc.FillStringAt(txt, 0, 0)
+		// fmt.Printf("text '%s', width %f\n", txt, textWidth)
 		gc.FillStringAt(txt, x-band/2+fontSize/2, y+fontSize/2)
 	}
 	return
