@@ -1,6 +1,7 @@
 package sgfutils
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -15,13 +16,13 @@ func CleanKatrainStuff(node *sgf.Node) error {
 
 	comments := node.AllValues(SGFTagComment)
 	cleanedComments := []string{}
-	ankiLlineReached := false
+	katrainLineReached := false
 	for _, comment := range comments {
 		for _, line := range strings.Split(comment, "\n") {
 			if startRegexp.MatchString(strings.TrimSpace(line)) {
-				ankiLlineReached = true
+				katrainLineReached = true
 			}
-			if !ankiLlineReached {
+			if !katrainLineReached {
 				cleanedComments = append(cleanedComments, line)
 			}
 		}
@@ -30,6 +31,29 @@ func CleanKatrainStuff(node *sgf.Node) error {
 
 	for _, child := range node.Children() {
 		if err := CleanKatrainStuff(child); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func CleanAnkiCommands(node *sgf.Node) error {
+	comments := node.AllValues(SGFTagComment)
+	cleanedComments := []string{}
+	for _, comment := range comments {
+		for _, line := range strings.Split(comment, "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "!") {
+				fmt.Println("Line ignored: ", line)
+			} else {
+				cleanedComments = append(cleanedComments, line)
+			}
+		}
+	}
+	node.SetValues(SGFTagComment, []string{strings.Join(cleanedComments, "\n")})
+
+	for _, child := range node.Children() {
+		if err := CleanAnkiCommands(child); err != nil {
 			return err
 		}
 	}
