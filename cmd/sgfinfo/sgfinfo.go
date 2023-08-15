@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/rooklift/sgf"
 	"github.com/tkrajina/sgf2img/sgfutils"
@@ -48,6 +49,7 @@ func doStuff() error {
 			fmt.Println("Rules:", gi.Rules)
 			fmt.Println("Komi:", gi.Komi)
 			fmt.Println("Handicap:", gi.Handicap)
+			fmt.Println("Moves:", gi.Moves)
 			fmt.Println("----------------------------------------------------------------------------------------------------")
 		} else {
 			fmt.Printf("%20s %5s vs %20s %5s: %s\n", gi.BlackName, gi.BlackRank, gi.WhiteName, gi.WhiteRank, fn)
@@ -62,10 +64,18 @@ func doStuff() error {
 	return nil
 }
 
+func indent(str string) string {
+	var res []string
+	for _, line := range strings.Split(str, "\n") {
+		res = append(res, "\t"+line)
+	}
+	return strings.Join(res, "\n")
+}
+
 func printComments(node *sgf.Node, depth int) error {
 	comments := node.AllValues(sgfutils.SGFTagComment)
 	for n, comment := range comments {
-		fmt.Printf("move #%d comment #%d: %s\n", depth, n+1, comment)
+		fmt.Printf("move #%d comment #%d:\n%s\n", depth, n+1, indent(comment))
 	}
 
 	for _, child := range node.Children() {

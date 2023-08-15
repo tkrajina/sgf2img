@@ -26,6 +26,8 @@ type GameInfo struct {
 	Komi     string
 	Handicap string
 
+	Moves int
+
 	SuggestedFilename string
 }
 
@@ -46,6 +48,16 @@ func ParseGameInfo(node *sgf.Node) GameInfo {
 	res.Rules, _ = node.GetValue(SGFTagRules)
 	res.Komi, _ = node.GetValue(SGFTagKomi)
 	res.Handicap, _ = node.GetValue(SGFTagHandicap)
+
+	tmpNode := node
+	for {
+		tmpNode = tmpNode.MainChild()
+		if tmpNode == nil {
+			break
+		} else {
+			res.Moves++
+		}
+	}
 
 	var newFn []string
 	if res.Date != "" {
