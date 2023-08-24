@@ -78,7 +78,10 @@ func printComments(node *sgf.Node, depth int) error {
 		fmt.Printf("move #%d comment #%d:\n%s\n", depth, n+1, indent(comment))
 	}
 
-	for _, child := range node.Children() {
+	for childNo, child := range node.Children() {
+		if childNo > 0 {
+			fmt.Printf("Child #%d\f", childNo+1)
+		}
 		if err := printComments(child, depth+1); err != nil {
 			return err
 		}

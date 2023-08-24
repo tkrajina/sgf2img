@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -25,15 +26,68 @@ var (
 	chunks               bool
 	leaveTmpFiles        bool
 	cleanKatrainComments bool
+	outFile              string
+	appendToFile         string
+	openWith             string
+	mistakesPrefix       string
+	firstToPlay          string
 )
 
+// Mistakes line
+// Mark mistake with X
+// Edit and save edited
+// Edit and if empty -- ignore
+// Only specific color
+
 func main() {
-	flag.BoolVar(&mainFirst, "m", false, "Main branch first?")
+	flag.BoolVar(&mainFirst, "mf", false, "Main branch first?")
 	flag.BoolVar(&leaveTmpFiles, "l", false, "Leave temp files?")
+	flag.StringVar(&openWith, "p", "", "Open/edit with before adding?")
 	flag.BoolVar(&chunks, "c", false, "Extract chunks (instead of leaving full sgf)?")
 	flag.BoolVar(&cleanKatrainComments, "ck", false, "Clean KaTrain comments?")
+	flag.StringVar(&outFile, "o", "", "Output file")
+	flag.StringVar(&appendToFile, "a", "", "Append to existing file")
+	flag.StringVar(&mistakesPrefix, "mi", "", "Prefix to detect mistaked (there should be a parallel branch sith a solution)")
+	flag.StringVar(&firstToPlay, "f", "", "First to play (color: w, b or player name)")
 	flag.Parse()
 	panicIfErr(doStuff())
+}
+
+func mistakesToAnki(node *sgf.Node, mistakedPrefix string) error {
+	tmpNode := node
+	for len(tmpNode.Children()) > 0 {
+		comments := tmpNode.AllValues(sgfutils.SGFTagComment)
+		for _, comment := range comments {
+			comment = strings.TrimSpace(comment)
+			fmt.Println(comment)
+			if strings.HasPrefix(comment, mistakedPrefix) {
+				fmt.Printf("Mistake node: %v\n", comment)
+				parentNode := tmpNode.Parent()
+				if parentNode == nil {
+					fmt.Println("Missing parent node")
+				} else if len(parentNode.Children()) < 2 {
+					fmt.Println("Missing solution branch")
+				} else {
+					branch := parentNode.Children()[1]
+					if coord, ok := tmpNode.GetValue(sgfutils.SGFTagWhiteMove); ok {
+						parentNode.AddValue(sgfutils.SGFTagX, coord)
+					}
+					if coord, ok := tmpNode.GetValue(sgfutils.SGFTagBlackMove); ok {
+						parentNode.AddValue(sgfutils.SGFTagX, coord)
+					}
+					branchNode := branch
+					branchLength := 1
+					for len(branchNode.Children()) > 0 {
+						branchLength++
+						branchNode = branchNode.Children()[0]
+					}
+					branchNode.AddValue(sgfutils.SGFTagComment, fmt.Sprintf("!anki -%d", branchLength))
+				}
+			}
+		}
+		tmpNode = tmpNode.Children()[0]
+	}
+	return nil
 }
 
 func parseComment(leafNode *sgf.Node) (string, []string, []string) {
@@ -69,6 +123,12 @@ func doStuff() error {
 		if err != nil {
 			fmt.Println("Error reading:", fn, "", err.Error())
 			return err
+		}
+
+		if mistakesPrefix != "" {
+			if err := mistakesToAnki(root, mistakesPrefix); err != nil {
+				return err
+			}
 		}
 
 		if cleanKatrainComments {
@@ -144,13 +204,55 @@ func doStuff() error {
 					return err
 				}
 
+				tmpNode, err := sgf.LoadSGF(string(byts))
+				if err != nil {
+					return err
+				}
+				color, name := sgfutils.FindFirstMove(tmpNode)
+				if firstToPlay != "" {
+					if strings.EqualFold(firstToPlay, color) {
+						fmt.Println("color", color, "OK")
+					} else if strings.HasPrefix(strings.ToLower(firstToPlay), strings.ToLower(name)) {
+						fmt.Println("player", name, "OK")
+					} else {
+						fmt.Println("first to play not ok => ignored")
+						continue
+					}
+				}
+
+				if openWith != "" {
+					cmd := exec.Command(openWith, tmpFileName)
+					outByts, err := cmd.Output()
+					if outByts != nil {
+						fmt.Println(string(outByts))
+					}
+					if err != nil {
+						return err
+					}
+					fmt.Println("<enter> to continue")
+					fmt.Scanln()
+
+					byts, err = os.ReadFile(tmpFileName)
+					if err != nil {
+						return err
+					}
+				}
+
 				if leaveTmpFiles {
 					fmt.Println("Variant saved to ", tmpFileName)
 				} else {
 					_ = os.Remove(tmpFileName)
 				}
 
-				csvRows = append(csvRows, []string{string(byts), strings.Join(tags, ",")})
+				tmpNode, err = sgf.LoadSGF(string(byts))
+				if err != nil {
+					return err
+				}
+				if len(tmpNode.Children()) == 0 {
+					fmt.Println("Empty sgf")
+				} else {
+					csvRows = append(csvRows, []string{string(byts), strings.Join(tags, ",")})
+				}
 			}
 
 			leafNode.SetValue(sgfutils.SGFTagComment, comment)
@@ -163,28 +265,35 @@ func doStuff() error {
 		}
 	}
 
-	// fix missing quotes (becase the latest anki needs all fields in quotes)
-	// for row := range csvRows {
-	// 	for column := range csvRows[row] {
-	// 		if !strings.Contains(csvRows[row][column], `"`) {
-	// 			csvRows[row][column] = `"` + csvRows[row][column] + `"`
-	// 		}
-	// 	}
-	// }
-
-	fn := "anki.csv"
-	f, err := os.Create(fn)
-	if err != nil {
-		return err
+	var writers []*os.File
+	if appendToFile != "" {
+		fmt.Printf("Appending %d rows to %s\n", len(csvRows), appendToFile)
+		f, err := os.OpenFile(appendToFile, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		writers = append(writers, f)
 	}
-	csvwriter := csv.NewWriter(f)
-	csvwriter.Comma = ';'
-	if err := csvwriter.WriteAll(csvRows); err != nil {
-		return err
+	if outFile == "" {
+		outFile = fmt.Sprintf("anki_%s.csv", time.Now().Format(time.RFC3339))
 	}
-	csvwriter.Flush()
+	if outFile != appendToFile {
+		fmt.Printf("Saving %d rows to %s\n", len(csvRows), outFile)
+		f, err := os.Create(outFile)
+		if err != nil {
+			return err
+		}
+		writers = append(writers, f)
+	}
 
-	fmt.Printf("Saved %d rows to %s\n", len(csvRows), fn)
+	for _, f := range writers {
+		csvwriter := csv.NewWriter(f)
+		csvwriter.Comma = ';'
+		if err := csvwriter.WriteAll(csvRows); err != nil {
+			return err
+		}
+		csvwriter.Flush()
+	}
 
 	return nil
 }
@@ -192,10 +301,10 @@ func doStuff() error {
 func findAnkiNodes(node *sgf.Node, depth int) (ankiNode []*sgf.Node) {
 	_, _, ankiLines := parseComment(node)
 	if len(node.Children()) == 0 {
-		fmt.Printf("Leaf node at pos %d\n", depth)
+		// fmt.Printf("Leaf node at pos %d\n", depth)
 		ankiNode = append(ankiNode, node)
 	} else if len(ankiLines) > 0 {
-		fmt.Printf("Anki node at pos %d\n", depth)
+		// fmt.Printf("Anki node at pos %d\n", depth)
 		ankiNode = append(ankiNode, node)
 	}
 	for _, child := range node.Children() {
