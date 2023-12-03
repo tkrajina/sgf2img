@@ -47,7 +47,6 @@ var (
 	appendToFile                   string
 	openWith                       string
 	branchesAreSolutionsToMistakes bool
-	branchesNo                     intFlags
 	firstToPlay                    string
 	tagsList                       string
 )
@@ -67,7 +66,6 @@ func main() {
 	flag.StringVar(&outFile, "o", "", "Output file")
 	flag.StringVar(&appendToFile, "a", "", "Append to existing file")
 	flag.BoolVar(&branchesAreSolutionsToMistakes, "b", false, "Branches are solutions to problems")
-	flag.Var(&branchesNo, "bn", "Branches at positions are solutions to problems (comma separated numbers)")
 	flag.StringVar(&firstToPlay, "p", "", "First to play (color: w, b or player name)")
 	flag.StringVar(&tagsList, "t", "", "Tags (coma separated)")
 	flag.Parse()
@@ -146,107 +144,10 @@ func doStuff() error {
 	}
 
 	for _, fn := range flag.Args() {
-		fmt.Println("Loading", fn)
-		root, err := sgf.Load(fn)
-		if err != nil {
-			fmt.Println("Error reading:", fn, "", err.Error())
+		if s, err := doStuffOnSGFFile(fn); err != nil {
 			return err
-		}
-
-		if err := mistakesToAnki(root); err != nil {
-			return err
-		}
-
-		if cleanKatrainComments {
-			if err := sgfutils.CleanKatrainStuff(root); err != nil {
-				return err
-			}
-		}
-
-		var tags []string
-		parts := strings.Split(path.Clean(fn), string(os.PathSeparator))
-		for n := range parts {
-			if n == 0 {
-				continue
-			}
-			tagFn := strings.Join(parts[:n], string(os.PathSeparator)) + string(os.PathSeparator) + "anki_tag"
-			byts, err := os.ReadFile(tagFn)
-			if err != nil {
-				continue
-			}
-			tag := strings.TrimSpace(string(byts))
-			fmt.Println("found tag", tag)
-			if tag != "" {
-				tags = append(tags, tag)
-			}
-		}
-		for _, tag := range strings.Split(tagsList, ",") {
-			tag = strings.ToLower(strings.TrimSpace(tag))
-			if tag != "" {
-				tags = append(tags, tag)
-			}
-		}
-		root.SetValues("TAGS", tags)
-
-		ankiNodes := findAnkiNodes(root, 0)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Found %d variants\n", len(ankiNodes))
-
-		for variantNo, leafNode := range ankiNodes {
-			root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
-			comment, cleanedComment, ankiLines := parseComment(leafNode)
-			if !chunks && variantNo == 0 {
-				ankiLines = append(ankiLines, "!anki")
-			}
-			var resultSgf string
-			for _, ankiLine := range ankiLines {
-				fmt.Printf("anki line: %s\n", ankiLine)
-				fmt.Printf("variant %d\n", variantNo)
-
-				if chunks {
-					ankiLineParts := append(strings.Fields(ankiLine), "1000000")
-					fmt.Printf("parts %#v\n", ankiLineParts)
-					n, err := strconv.ParseInt(ankiLineParts[1], 10, 32)
-					_ = n
-					if err != nil {
-						return err
-					}
-					fmt.Println("TODO", ankiLine)
-					sub, err := sgfutils.Sub(leafNode, -int(n), sgfutils.SubOpts{})
-					if err != nil {
-						return err
-					}
-					resultSgf = sub.SGF()
-				} else {
-					leafNode.MakeMainLine()
-					leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
-					if err != nil {
-						return err
-					}
-					resultSgf = root.SGF()
-				}
-
-				tmpNode, err := sgf.LoadSGF(resultSgf)
-				if err != nil {
-					return err
-				}
-				color, name := sgfutils.FindFirstMove(tmpNode)
-				if firstToPlay != "" {
-					if strings.EqualFold(firstToPlay, color) {
-						fmt.Println("color", color, "OK")
-					} else if strings.HasPrefix(strings.ToLower(firstToPlay), strings.ToLower(name)) {
-						fmt.Println("player", name, "OK")
-					} else {
-						fmt.Println("first to play not ok => ignored")
-						continue
-					}
-				}
-				sgfs = append(sgfs, resultSgf)
-			}
-
-			leafNode.SetValue(sgfutils.SGFTagComment, comment)
+		} else {
+			sgfs = append(sgfs, s...)
 		}
 	}
 
@@ -299,6 +200,128 @@ func doStuff() error {
 	}
 
 	return convertCollectionToAnki(sgfs)
+}
+
+func doStuffOnSGFFile(fn string) ([]string, error) {
+	var sgfs []string
+	fmt.Println("Loading", fn)
+	root, err := sgf.Load(fn)
+	if err != nil {
+		fmt.Println("Error reading:", fn, "", err.Error())
+		return nil, err
+	}
+
+	if err := mistakesToAnki(root); err != nil {
+		return nil, err
+	}
+
+	if cleanKatrainComments {
+		if err := sgfutils.CleanKatrainStuff(root); err != nil {
+			return nil, err
+		}
+	}
+
+	var tags []string
+	parts := strings.Split(path.Clean(fn), string(os.PathSeparator))
+	for n := range parts {
+		if n == 0 {
+			continue
+		}
+		tagFn := strings.Join(parts[:n], string(os.PathSeparator)) + string(os.PathSeparator) + "anki_tag"
+		byts, err := os.ReadFile(tagFn)
+		if err != nil {
+			continue
+		}
+		tag := strings.TrimSpace(string(byts))
+		fmt.Println("found tag", tag)
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	for _, tag := range strings.Split(tagsList, ",") {
+		tag = strings.ToLower(strings.TrimSpace(tag))
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	root.SetValues("TAGS", tags)
+
+	ankiNodes := findAnkiNodes(root, 0)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("Found %d variants\n", len(ankiNodes))
+
+	firstMovesCount := make(map[string]int)
+	for variantNo, leafNode := range ankiNodes {
+		root.SetValue(sgfutils.SGFTagSource, fmt.Sprintf("%s variant %d", fn, variantNo))
+		comment, cleanedComment, ankiLines := parseComment(leafNode)
+		if !chunks && variantNo == 0 {
+			ankiLines = append(ankiLines, "!anki")
+		}
+		var resultSgf string
+		for _, ankiLine := range ankiLines {
+			// fmt.Printf("anki line: %s\n", ankiLine)
+			// fmt.Printf("variant %d\n", variantNo)
+
+			if chunks {
+				ankiLineParts := append(strings.Fields(ankiLine), "1000000")
+				// fmt.Printf("parts %#v\n", ankiLineParts)
+				n, err := strconv.ParseInt(ankiLineParts[1], 10, 32)
+				_ = n
+				if err != nil {
+					return nil, err
+				}
+				// fmt.Println("TODO", ankiLine)
+				sub, err := sgfutils.Sub(leafNode, -int(n), sgfutils.SubOpts{})
+				if err != nil {
+					return nil, err
+				}
+				resultSgf = sub.SGF()
+			} else {
+				leafNode.MakeMainLine()
+				leafNode.SetValue(sgfutils.SGFTagComment, strings.Join(cleanedComment, "\n")+"\n"+ankiLine)
+				if err != nil {
+					return nil, err
+				}
+				resultSgf = root.SGF()
+			}
+
+			tmpNode, err := sgf.LoadSGF(resultSgf)
+			if err != nil {
+				return nil, err
+			}
+			color, name, coord := sgfutils.FindFirstMove(tmpNode)
+			if firstToPlay != "" {
+				if strings.EqualFold(firstToPlay, color) {
+					fmt.Println("color", color, "OK")
+				} else if strings.HasPrefix(strings.ToLower(firstToPlay), strings.ToLower(name)) {
+					fmt.Println("player", name, "OK")
+				} else {
+					fmt.Printf("first to play '%s' not matching => ignored\n", name)
+					continue
+				}
+			}
+
+			key := fmt.Sprintf("%s %s", color, coord)
+			count, repeated := firstMovesCount[key]
+			firstMovesCount[key] += 1
+
+			if count >= 3 {
+				if repeated {
+					fmt.Println(key, "repeated", count, "times => ignore")
+				} else {
+					sgfs = append(sgfs, resultSgf)
+				}
+			} else {
+				sgfs = append(sgfs, resultSgf)
+			}
+		}
+
+		leafNode.SetValue(sgfutils.SGFTagComment, comment)
+	}
+
+	return sgfs, nil
 }
 
 func convertCollectionToAnki(sgfs []string) error {

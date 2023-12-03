@@ -59,7 +59,7 @@ func BoardToString(board sgf.Board) string {
 	return strings.Join(res, "\n")
 }
 
-func FindFirstMove(node *sgf.Node) (color, player string) {
+func FindFirstMove(node *sgf.Node) (color, player, coords string) {
 	whiteName, blackName := "", ""
 	tmpNode := node
 	for len(tmpNode.Children()) > 0 {
@@ -76,15 +76,27 @@ func FindFirstMove(node *sgf.Node) (color, player string) {
 	for len(tmpNode.Children()) > 0 {
 		if coord, ok := tmpNode.GetValue(SGFTagWhiteMove); ok && coord != "" {
 			color = "w"
+			coords = coord
 			player = whiteName
 			return
 		}
 		if coord, ok := tmpNode.GetValue(SGFTagBlackMove); ok && coord != "" {
 			color = "b"
+			coords = coord
 			player = blackName
 			return
 		}
 		tmpNode = tmpNode.Children()[0]
+	}
+	return
+}
+
+func AddMissingPLayerColor(s *sgf.Node) (color string, added bool) {
+	color, _, _ = FindFirstMove(s)
+	toPlay := s.AllValues(SGFTagPlayer)
+	if len(toPlay) == 0 && color != "" {
+		s.AddValue(SGFTagPlayer, strings.ToUpper(color))
+		added = true
 	}
 	return
 }

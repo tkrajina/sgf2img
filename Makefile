@@ -35,3 +35,4 @@ install:
 	go build -o $(DIR)/sgfcleancomments ./cmd/sgfcleancomments/*go
 	go build -o $(DIR)/sgf2kifu ./cmd/sgf2kifu/*go
 	go build -o $(DIR)/sgfstrip ./cmd/sgfstrip/*go
+	go build -o $(DIR)/sgfaddcolortoplay ./cmd/sgfaddcolortoplay/*go
