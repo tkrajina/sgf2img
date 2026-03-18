@@ -110,10 +110,6 @@ func animatePng(images []image.Image, fn string) ([]byte, error) {
 }
 
 func emptyLinesAround(node *sgf.Node) (up, down, left, right int) {
-	fmt.Println(sgfutils.BoardToString(*node.Board()))
-	if len(node.AllValues(sgfutils.SGFTagBlackMove)) == 0 && len(node.AllValues(sgfutils.SGFTagWhiteMove)) == 0 {
-		node = node.MainChild()
-	}
 	if node == nil {
 		return
 	}
