@@ -21,15 +21,18 @@ func main() {
 	var help bool
 	var typ string
 	var nodeNumbers string
+	var crop string
 	flag.Int64Var(&(opts.ImageSize), "s", 400, "Image size (max goban board image size)")
 	flag.BoolVar(&(opts.Grayscale), "g", false, "Grayscale only for png images")
 	flag.BoolVar(&(opts.MainLine), "ml", false, "Make one image out of the main branch line")
 	flag.BoolVar(&(opts.Verbose), "v", false, "Verbose")
-	flag.BoolVar(&(opts.AutoCrop), "c", false, "Autocrop")
+	flag.StringVar(&(crop), "c", "", "Crop type (auto, square)")
 	flag.StringVar(&nodeNumbers, "n", "0", "Node numbers (coma separated, -1 for last node)")
 	flag.StringVar(&typ, "t", string(sgf2img.PNG), fmt.Sprintf("Image type (%s|%s)", sgf2img.PNG, sgf2img.SVG))
 	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
+
+	opts.Crop = sgf2img.CropType(crop)
 
 	for _, nStr := range strings.Split(nodeNumbers, ",") {
 		nStr = strings.TrimSpace(nStr)

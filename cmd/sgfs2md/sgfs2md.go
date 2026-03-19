@@ -29,7 +29,7 @@ var recursive bool
 var outFile string
 var title string
 var imgSize int
-var opts = sgf2img.Options{AutoCrop: true, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
+var opts = sgf2img.Options{Crop: sgf2img.CropTypeSquare, ImageSize: 150, ImageType: sgf2img.SVG, Images: []int{0, 1}}
 
 func main() {
 	flag.BoolVar(&recursive, "r", false, "Recursive from current from directories")

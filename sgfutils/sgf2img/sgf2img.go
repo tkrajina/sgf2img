@@ -25,6 +25,14 @@ const (
 	SVG ImageType = "svg"
 )
 
+type CropType string
+
+const (
+	CropTypeNone   CropType = ""
+	CropTypeAuto   CropType = "auto"
+	CropTypeSquare CropType = "square"
+)
+
 type Options struct {
 	ImageSize int64
 	Images    []int
@@ -32,7 +40,7 @@ type Options struct {
 	Grayscale bool
 	MainLine  bool
 	Verbose   bool
-	AutoCrop  bool
+	Crop      CropType
 	BW        bool
 }
 
@@ -150,7 +158,7 @@ func emptyLinesAround(node *sgf.Node) (up, down, left, right int) {
 
 func calculateCrop(nodes []*sgf.Node, opts Options) (crop Crop, originalImgSize int) {
 	originalImgSize = int(opts.ImageSize)
-	if !opts.AutoCrop {
+	if opts.Crop == CropTypeNone {
 		return
 	}
 	boardSize := -1
@@ -185,7 +193,10 @@ func calculateCrop(nodes []*sgf.Node, opts Options) (crop Crop, originalImgSize 
 	crop.Down = down
 	crop.Left = left
 	crop.Right = right
-	crop.Bigger(2)
+	crop.Bigger(2, 2)
+	if opts.Crop == CropTypeSquare {
+		crop.SquareLike()
+	}
 
 	resize := float64(boardSize) / math.Max(
 		float64(boardSize-crop.Left-crop.Right),

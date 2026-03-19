@@ -2,6 +2,7 @@ package sgf2img
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,11 +23,27 @@ type Crop struct {
 	Up, Down, Left, Right int
 }
 
-func (c *Crop) Bigger(s int) {
-	c.Up -= s
-	c.Down -= s
-	c.Left -= s
-	c.Right -= s
+func (c *Crop) SquareLike() {
+	horizontal := c.Left + c.Right
+	vertical := c.Up + c.Down
+	for i := 0; i < 2*int(math.Abs(float64(horizontal)-float64(vertical))); i++ {
+		if horizontal == vertical {
+			return
+		} else if horizontal > vertical {
+			c.Bigger(1, 0)
+		} else {
+			c.Bigger(0, 1)
+		}
+		horizontal = c.Left + c.Right
+		vertical = c.Up + c.Down
+	}
+}
+
+func (c *Crop) Bigger(horizontal, vertical int) {
+	c.Up -= vertical
+	c.Down -= vertical
+	c.Left -= horizontal
+	c.Right -= horizontal
 	if c.Up < 0 {
 		c.Up = 0
 	}
