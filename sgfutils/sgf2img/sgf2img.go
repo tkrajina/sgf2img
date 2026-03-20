@@ -40,7 +40,8 @@ type Options struct {
 	Grayscale bool
 	MainLine  bool
 	Verbose   bool
-	Crop      CropType
+	CropType  CropType
+	Crop      [4]int // top, right, bottom, left
 	BW        bool
 }
 
@@ -158,43 +159,57 @@ func emptyLinesAround(node *sgf.Node) (up, down, left, right int) {
 
 func calculateCrop(nodes []*sgf.Node, opts Options) (crop Crop, originalImgSize int) {
 	originalImgSize = int(opts.ImageSize)
-	if opts.Crop == CropTypeNone {
+	if opts.CropType == CropTypeNone && len(opts.Crop) == 0 {
 		return
 	}
+
 	boardSize := -1
-	var up, down, left, right int
-	for n, node := range nodes {
-		if n == 0 {
-			up, down, left, right = emptyLinesAround(node)
-			boardSize = node.Board().Size
-		} else {
-			u, d, l, r := emptyLinesAround(node)
-			if u < up {
-				up = u
+	if len(nodes) > 0 {
+		boardSize = nodes[0].Board().Size
+	}
+
+	// Use explicit crop values if provided
+	if opts.Crop != [4]int{} {
+		crop.Up = opts.Crop[0]    // top
+		crop.Right = opts.Crop[1] // right
+		crop.Down = opts.Crop[2]  // bottom
+		crop.Left = opts.Crop[3]  // left
+	} else {
+		// Auto-calculate crop from board positions
+		var up, down, left, right int
+		for n, node := range nodes {
+			if n == 0 {
+				up, down, left, right = emptyLinesAround(node)
+			} else {
+				u, d, l, r := emptyLinesAround(node)
+				if u < up {
+					up = u
+				}
+				if d < down {
+					down = d
+				}
+				if l < left {
+					left = l
+				}
+				if r < right {
+					right = r
+				}
 			}
-			if d < down {
-				down = d
-			}
-			if l < left {
-				left = l
-			}
-			if r < right {
-				right = r
+			if opts.Verbose {
+				fmt.Printf("node #%d -- empty lines: %d %d %d %d\n", n, up, down, left, right)
 			}
 		}
 		if opts.Verbose {
-			fmt.Printf("node #%d -- empty lines: %d %d %d %d\n", n, up, down, left, right)
+			fmt.Printf("crop: %d %d %d %d\n", up, down, left, right)
 		}
+		crop.Up = up
+		crop.Down = down
+		crop.Left = left
+		crop.Right = right
+		crop.Bigger(2, 2)
 	}
-	if opts.Verbose {
-		fmt.Printf("crop: %d %d %d %d\n", up, down, left, right)
-	}
-	crop.Up = up
-	crop.Down = down
-	crop.Left = left
-	crop.Right = right
-	crop.Bigger(2, 2)
-	if opts.Crop == CropTypeSquare {
+
+	if opts.CropType == CropTypeSquare {
 		crop.SquareLike()
 	}
 

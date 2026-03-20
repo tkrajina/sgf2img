@@ -32,7 +32,23 @@ func main() {
 	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
 
-	opts.Crop = sgf2img.CropType(crop)
+	if crop == "" {
+		// No crop
+	} else if crop == "auto" || crop == "square" {
+		opts.CropType = sgf2img.CropType(crop)
+	} else {
+		parts := strings.Split(crop, ",")
+		parts = append(parts, "0", "0", "0", "0")
+		for n := range opts.Crop {
+			c, err := strconv.ParseInt(strings.TrimSpace(parts[n]), 10, 32)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Invalid crop value: %s\n", parts[n])
+				os.Exit(1)
+			}
+			opts.Crop[n] = int(c)
+		}
+		opts.CropType = sgf2img.CropTypeAuto
+	}
 
 	for _, nStr := range strings.Split(nodeNumbers, ",") {
 		nStr = strings.TrimSpace(nStr)
