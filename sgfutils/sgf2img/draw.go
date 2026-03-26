@@ -136,8 +136,9 @@ func drawStones(gc draw2d.GraphicContext, node sgf.Node, imgSize int) {
 }
 
 func drawCircles(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []string) {
+	circles := expandPointList(node.AllValues("CR"), node.Board().Size)
 	band := float64(imgSize) / float64(node.Board().Size) * .9
-	for _, circle := range node.AllValues("CR") {
+	for _, circle := range circles {
 		coords = append(coords, circle)
 		x, y := sgfCoordinatesToImageCoordinates(circle, imgSize, *node.Board())
 		if node.Board().Get(circle) == sgf.BLACK {
@@ -191,7 +192,20 @@ func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []
 	return
 }
 
+func expandPointList(values []string, boardSize int) []string {
+	var result []string
+	for _, v := range values {
+		if len(v) == 5 && v[2] == ':' {
+			result = append(result, sgf.ParsePointList(v, boardSize)...)
+		} else {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
 func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, imgSize, polylineSide int, initialAngle float64) (coords []string) {
+	triangles = expandPointList(triangles, node.Board().Size)
 	band := float64(imgSize) / float64(node.Board().Size) * .9
 	for _, triangle := range triangles {
 		coords = append(coords, triangle)
