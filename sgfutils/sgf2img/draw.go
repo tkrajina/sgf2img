@@ -86,6 +86,7 @@ func boardToImage(gc draw2d.GraphicContext, node sgf.Node, imgSize int, opts Boa
 
 	allDecorations = append(allDecorations, drawLabels(gc, node, int(imgSize))...)
 	allDecorations = append(allDecorations, drawCircles(gc, node, int(imgSize))...)
+	allDecorations = append(allDecorations, drawCrosses(gc, node, int(imgSize))...)
 
 last_moves_loop:
 	for _, circle := range lastMoves {
@@ -188,6 +189,40 @@ func drawLabels(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []
 		// textWidth := gc.FillStringAt(txt, 0, 0)
 		// fmt.Printf("text '%s', width %f\n", txt, textWidth)
 		gc.FillStringAt(txt, x-band/2+fontSize/2, y+fontSize/2)
+	}
+	return
+}
+
+func drawCrosses(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords []string) {
+	crosses := expandPointList(node.AllValues("MA"), node.Board().Size)
+	band := float64(imgSize) / float64(node.Board().Size) * .9
+	offset := band / 4 // Size of the cross arms
+
+	for _, cross := range crosses {
+		coords = append(coords, cross)
+		x, y := sgfCoordinatesToImageCoordinates(cross, imgSize, *node.Board())
+
+		// Set color based on stone color
+		if node.Board().Get(cross) == sgf.BLACK {
+			gc.SetStrokeColor(color.RGBA{0xff, 0xff, 0xff, 0xff})
+		} else {
+			gc.SetStrokeColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
+		}
+		gc.SetLineWidth(2.0)
+
+		// Draw first diagonal (top-left to bottom-right)
+		gc.BeginPath()
+		gc.MoveTo(x-offset, y-offset)
+		gc.LineTo(x+offset, y+offset)
+		gc.Close()
+		gc.FillStroke()
+
+		// Draw second diagonal (top-right to bottom-left)
+		gc.BeginPath()
+		gc.MoveTo(x+offset, y-offset)
+		gc.LineTo(x-offset, y+offset)
+		gc.Close()
+		gc.FillStroke()
 	}
 	return
 }
