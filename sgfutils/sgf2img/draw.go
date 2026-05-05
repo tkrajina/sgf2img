@@ -223,7 +223,7 @@ func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, 
 
 		var pts [][2]float64
 		for i := 0.0; i < 2*math.Pi; i += 2 * math.Pi / float64(polylineSide) {
-			pts = append(pts, [2]float64{x - band/2.*math.Sin(i+initialAngle), y - band/2.*math.Cos(i+initialAngle)})
+			pts = append(pts, [2]float64{x - band/2*0.75*math.Sin(i+initialAngle), y - band/2*0.75*math.Cos(i+initialAngle)})
 		}
 		for n := range pts {
 			gc.BeginPath()
