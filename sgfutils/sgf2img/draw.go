@@ -148,7 +148,7 @@ func drawCircles(gc draw2d.GraphicContext, node sgf.Node, imgSize int) (coords [
 			gc.SetFillColor(color.RGBA{0x00, 0x00, 0x00, 0x00})
 			gc.SetStrokeColor(color.Black)
 		}
-		gc.SetLineWidth(0.40)
+		gc.SetLineWidth(2.0)
 		gc.ArcTo(x, y, band/3, band/3, 0, 2*math.Pi)
 		gc.Close()
 		gc.FillStroke()
@@ -214,7 +214,7 @@ func drawPolyline(triangles []string, gc draw2d.GraphicContext, node *sgf.Node, 
 		} else {
 			gc.SetStrokeColor(color.RGBA{0x00, 0x00, 0x00, 0xff})
 		}
-		gc.SetLineWidth(0.2)
+		gc.SetLineWidth(2.0)
 		boardX, boardY, onboard := sgf.ParsePoint(triangle, node.Board().Size)
 		if !onboard {
 			continue
